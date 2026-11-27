@@ -316,6 +316,7 @@ class PrivateBattlefield(Battlefield):
             "running": record is not None,
             "round": active[2] if active else None,
             "active": eligible[active[1]].label if active else None,
+            "active_id": active[1] if active else None,
             "enemy_turn": bool(active and eligible[active[1]].ref.kind != "pilot"),
             "turn": f"{record['epoch']}:{active[0]}" if active else None,
             "yours": is_active,
@@ -330,16 +331,16 @@ class PrivateBattlefield(Battlefield):
             "can_close": bool(handler and record and not locked and not paused),
         }
 
-    def view(self, viewer):
+    def view(self, viewer, *, destinations=False):
         with self.commands:
             for attempt in range(3):
                 try:
-                    return self._view(viewer)
+                    return self._view(viewer, destinations=destinations)
                 except BattlefieldChanged:
                     if attempt == 2:
                         raise
 
-    def _view(self, viewer):
+    def _view(self, viewer, *, destinations=False):
         world = self.world.get(viewer)
         with self.store.engine.connect() as connection:
             state = load_state(connection, self.store.campaign_id)
@@ -494,6 +495,16 @@ class PrivateBattlefield(Battlefield):
                 proactive=not setup["running"] or setup["yours"] and not setup["enemy_turn"],
                 busy=view["busy"],
             )
+            if destinations and setup["yours"]:
+                with self.store.engine.connect() as connection:
+                    current = load_state(connection, self.store.campaign_id)
+                    if current.revision != state.revision:
+                        raise BattlefieldChanged("Battlefield changed while loading. Please retry.")
+                    self.project_destinations(
+                        connection, viewer, current, view["actions"],
+                        map_view.get("board", view["board"]),
+                        (lambda cell: walkable(plan, cell)) if plan else None,
+                    )
             return (
                 view
                 | map_view

@@ -71,11 +71,15 @@
   border: 1px solid currentColor;
   background: repeating-linear-gradient(90deg,currentColor 0 1px,transparent 1px 4px) center / 13px 9px no-repeat;
 }
-.handover-secondary:empty { display:none; }
-.handover-secondary h3 + .handover-rows { margin-top: 2px; }
-.handover-secondary .handover-rows + h3 { margin-top: 16px; }
 @media (max-width: 620px) {
-  .handover-row { grid-template-columns: minmax(0, 1fr); }
+  .handover-row { gap: 5px 8px; }
+  .handover-row button { min-block-size: 44px; max-inline-size: 135px; font-size: 12px; }
   .handover-actions { justify-content: flex-start; }
-  .handover-secondary .handover-row > button { justify-self: start; }
 }
+.handover-assigned:not([hidden]) {
+  border-inline-start: 3px solid var(--key);
+  background: var(--rail);
+  padding: 8px 10px;
+  margin-block-end: 12px;
+}
+.handover-assigned h3 { margin: 0; }

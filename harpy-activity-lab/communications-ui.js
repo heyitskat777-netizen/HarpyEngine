@@ -1,7 +1,11 @@
-export function communicationsUI(request, onUpdate, artwork) {
+export function communicationsUI(request, onUpdate, artwork, refreshDelivery) {
   const panel = document.getElementById("communications");
   const list = document.getElementById("communications-contacts");
+  const desk = document.getElementById("communications-desk");
+  const unread = document.getElementById("communications-unread");
+  const toggle = document.getElementById("communications-toggle");
   const dialog = document.getElementById("communication-dialog");
+  const back = document.getElementById("communication-back");
   const history = document.getElementById("communication-history");
   const form = document.getElementById("communication-form");
   const message = document.getElementById("communication-message");
@@ -15,7 +19,39 @@ export function communicationsUI(request, onUpdate, artwork) {
   let active;
   let sequence = 0;
   let identity;
+  let contacts = [];
+  let seen = {};
+  let deliveries = new Map();
+  let returnTo;
   const threads = new Map();
+
+  const isUnread = contact => contact.latest_message > (seen[contact.id] ?? 0);
+
+  function paintUnread() {
+    const any = contacts.some(isUnread);
+    unread.hidden = !any;
+    toggle.setAttribute("aria-label", any ? "Comms, unread transmissions" : "Comms");
+    for (const button of list.querySelectorAll("[data-contact]")) {
+      const contact = contacts.find(item => item.id === button.dataset.contact);
+      const latest = contact && isUnread(contact);
+      button.toggleAttribute("data-unread", Boolean(latest));
+      if (latest) button.setAttribute("aria-description", "Unread transmissions");
+      else button.removeAttribute("aria-description");
+    }
+  }
+
+  function markRead(thread, lastIncoming) {
+    if (!identity || lastIncoming <= (seen[thread.id] ?? 0)) return;
+    seen[thread.id] = lastIncoming;
+    try { localStorage.setItem("foundation-comms:" + identity, JSON.stringify(seen)); } catch {}
+    paintUnread();
+  }
+
+  function paintDeliveries() {
+    for (const [id, record] of rows) {
+      record.delivery.hidden = !record.outgoing || deliveries.get(id) !== "sent";
+    }
+  }
 
   function portrait(target, person) {
     const initials = (person.label ?? "?").trim().split(/\s+/).map(word => word[0]).slice(0,2).join("").toUpperCase();
@@ -70,18 +106,29 @@ export function communicationsUI(request, onUpdate, artwork) {
         const avatar=document.createElement("span");avatar.className="dialogue-portrait";
         const name=document.createElement("strong");author.append(avatar,name);
         const body=document.createElement("p");item.append(author,body);
-        record={item,avatar,name,body};rows.set(String(entry.id),record);
+        const delivery = document.createElement("small");
+        delivery.className = "communication-delivery";
+        delivery.textContent = "✓ Discord alert sent";
+        delivery.hidden = true;
+        item.append(delivery);
+        record={item,avatar,name,body,delivery};rows.set(String(entry.id),record);
       }
+      record.outgoing = (entry.author_id ?? entry.sender) === senderRecord?.id;
       portrait(record.avatar,{label:entry.callsign,portrait:entry.portrait});
       record.name.textContent=entry.callsign;record.body.textContent=entry.body;
       return record.item;
     }));
-    history.scrollTop = scroll || atBottom ? history.scrollHeight : priorScroll;
+    paintDeliveries();
+    history.scrollTop = scroll ? history.scrollHeight : thread.restoreScroll ?? (atBottom ? history.scrollHeight : priorScroll);
+    delete thread.restoreScroll;
+    markRead(thread, Math.max(0, ...entries.filter(entry =>
+      (entry.author_id ?? entry.sender) === (recipient?.id ?? thread.id)).map(entry => entry.id)));
     if (thread.message !== undefined) {
       const entry = history.querySelector(`[data-message="${CSS.escape(String(thread.message))}"]`);
       if (entry) {
         entry.tabIndex = -1;
-        entry.focus();
+        entry.focus({preventScroll:true});
+        entry.scrollIntoView({block:"nearest"});
       }
       delete thread.message;
     }
@@ -101,6 +148,10 @@ export function communicationsUI(request, onUpdate, artwork) {
     active = previous ?? {...contact, intent:null, draft:options.draft ?? "",pending:false};
     Object.assign(active,contact,{message});
     threads.set(key,active);
+    returnTo = desk.open ? {id:contact.id, scroll:desk.scrollTop} : null;
+    back.hidden = !returnTo;
+    active.restoreScroll = previous?.scroll;
+    document.getElementById("communication-title").textContent = contact.label;
     showParties(senderRecord,contact);
     feedback.textContent = active.feedback ?? "";
     history.replaceChildren();
@@ -108,10 +159,21 @@ export function communicationsUI(request, onUpdate, artwork) {
     document.getElementById("communication-message").readOnly = active.pending;
     submit.disabled = active.pending;
     if (!dialog.open) dialog.showModal();
-    reload(active, true);
+    reload(active, previous?.scroll == null);
+    refreshDelivery();
   }
 
-  dialog.addEventListener("close", () => { active = null; });
+  dialog.addEventListener("close", () => {
+    if (dialog.open) return;
+    if (active) active.scroll = history.scrollTop;
+    active = null;
+    if (desk.open && returnTo) {
+      list.querySelector(`[data-contact="${CSS.escape(returnTo.id)}"]`)?.focus({preventScroll:true});
+      desk.scrollTop = returnTo.scroll;
+    }
+    returnTo = null;
+  });
+  back.addEventListener("click", () => dialog.close());
   message.addEventListener("input",() => {
     if (active) active.draft = message.value;
   });
@@ -133,7 +195,7 @@ export function communicationsUI(request, onUpdate, artwork) {
     message.readOnly = true;
     submit.disabled = true;
     try {
-      await request(thread.id, {
+      const result = await request(thread.id, {
         method:"POST",
         headers:{"Content-Type":"application/json","Idempotency-Key":thread.intent.key},
         body:JSON.stringify({text}),
@@ -145,6 +207,7 @@ export function communicationsUI(request, onUpdate, artwork) {
       message.value = thread.draft;
       feedback.textContent = thread.feedback;
       await reload(thread, true);
+      if (result.dm_receipt) refreshDelivery();
     } catch (error) {
       thread.feedback = error.message + " Retry this transmission to check the same record.";
       if (thread === active) feedback.textContent = thread.feedback;
@@ -157,25 +220,20 @@ export function communicationsUI(request, onUpdate, artwork) {
     }
   });
 
-  function update(contacts, mailbox) {
-    if (identity !== mailbox) {
-      if (dialog.open) dialog.close();
-      active = null;
-      sequence++;
-      threads.clear();
-      rows.clear();participantCards.clear();senderRecord=undefined;participants?.replaceChildren();
-      message.value = "";
-      identity = mailbox;
-    }
-    panel.hidden = !contacts;
-    onUpdate(contacts ?? []);
-    list.replaceChildren(...(contacts ?? []).map(contact => {
+  function renderContacts() {
+    const order = new Map([...list.querySelectorAll("[data-contact]")].map((button,index) => [button.dataset.contact,index]));
+    const focused = document.activeElement?.closest("[data-contact]")?.dataset.contact;
+    const sorted = [...contacts].sort((a,b) => desk.open && order.size
+      ? (order.get(a.id) ?? Infinity) - (order.get(b.id) ?? Infinity)
+      : Number(isUnread(b)) - Number(isUnread(a)) || (b.latest_message ?? 0) - (a.latest_message ?? 0));
+    list.replaceChildren(...sorted.map(contact => {
       const item = document.createElement("li");
       const button = document.createElement("button");
       const name = document.createElement("strong");
       const role = document.createElement("span");
       const image = document.createElement("span");
       button.type = "button";
+      button.dataset.contact = contact.id;
       button.setAttribute("aria-haspopup", "dialog");
       name.className = "contact-name";
       name.textContent = contact.label;
@@ -191,11 +249,39 @@ export function communicationsUI(request, onUpdate, artwork) {
       item.append(button);
       return item;
     }));
-    if (active && !contacts?.some(contact => contact.id === active.id)) dialog.close();
+    paintUnread();
+    if (focused) list.querySelector(`[data-contact="${CSS.escape(focused)}"]`)?.focus({preventScroll:true});
+  }
+  desk.addEventListener("beforetoggle", event => {
+    if (event.newState === "open") renderContacts();
+  });
+
+  function update(nextContacts, mailbox) {
+    if (identity !== mailbox) {
+      if (dialog.open) dialog.close();
+      active = null;
+      sequence++;
+      threads.clear();
+      rows.clear();participantCards.clear();senderRecord=undefined;participants?.replaceChildren();
+      list.replaceChildren();
+      deliveries.clear();
+      seen = {};
+      try { seen = JSON.parse(localStorage.getItem("foundation-comms:" + mailbox) ?? "{}") ?? {}; } catch {}
+      message.value = "";
+      identity = mailbox;
+    }
+    contacts = nextContacts ?? [];
+    panel.hidden = !nextContacts;
+    onUpdate(contacts);
+    renderContacts();
+    if (active && !contacts.some(contact => contact.id === active.id)) dialog.close();
     for (const [key,thread] of threads) {
-      if (!contacts?.some(contact => contact.id === thread.id)) threads.delete(key);
+      if (!contacts.some(contact => contact.id === thread.id)) threads.delete(key);
     }
   }
 
-  return {open, update};
+  return {open, update, reading:() => dialog.open, setDeliveries(receipts) {
+    deliveries = new Map(receipts.map(receipt => [String(receipt.record), receipt.recipients[0]?.status]));
+    paintDeliveries();
+  }};
 }

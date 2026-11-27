@@ -623,7 +623,7 @@ export function openSheetPortrayal({activityFetch, scene, kind, actorToken}) {
   load().catch(fail);
 }
 
-export function mountDirectorDesk(parent, scene, activityFetch, activityShadow = false, liveTrial = false, reviewOnly = false, openNativePlay) {
+export function mountDirectorDesk(parent, scene, activityFetch, activityShadow = false, liveTrial = false, reviewOnly = false, openNativePlay, picture) {
   const desk = element(scene ? "details" : "div");
   if (scene) desk.append(element("summary", "Director work"));
   const body = element("div");
@@ -885,6 +885,32 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
   }
 
   function renderSessionZero(state) {
+    const nameFor = id => state.member_names?.[id] ?? "Recruit";
+    const missing = Object.entries(state.sheets ?? {}).filter(([,status]) => status !== "attached");
+    let next;
+    let destination = "campaign-setup-session-zero";
+    if (!state.opening && !state.owner_preview) {
+      if (!state.members.length && state.can_set_group) next = "Choose the Session Zero group";
+      else if (state.is_pilot && missing.some(([id]) => id === state.viewer)) next = "Attach your current pilot sheet";
+      else if (state.plan_proposal && !state.plan_approved) {
+        const remaining = state.members.length - state.plan_approvals;
+        next = !state.own_plan_approval ? "Review the campaign plan"
+          : remaining === 1 ? "One plan approval outstanding" : remaining + " plan approvals outstanding";
+        destination = "campaign-setup-plan";
+      } else if (missing.length) {
+        next = missing.length === 1 ? "Waiting on " + nameFor(missing[0][0]) + "’s sheet"
+          : "Waiting on " + missing.length + " pilot sheets";
+      } else if (state.can_edit_plan && !state.plan_proposal) {
+        next = "File the campaign plan";
+        destination = "campaign-setup-plan";
+      }
+    }
+    if (next) {
+      const summary = element("a", next + " →");
+      summary.className = "campaign-setup-next";
+      summary.href = "#" + destination;
+      body.append(summary);
+    }
     const row = setupSection(body, "Session Zero", "campaign-setup-session-zero");
     if (state.owner_preview) {
       const plan = {approved:"Approved", pending:"Awaiting approval", not_filed:"Not filed"};
@@ -932,7 +958,12 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
         input.type = "checkbox";
         input.checked = state.members.includes(id) || id === required;
         input.disabled = id === required;
-        label.append(input, element("span", member(id)));
+        const initials = Array.from(nameFor(id)).slice(0,2).join("").toUpperCase();
+        const portrait = element("span", initials);
+        portrait.className = "dialogue-portrait";
+        portrait.setAttribute("aria-hidden", "true");
+        if (state.member_portraits?.[id]) picture?.(portrait, state.member_portraits[id], {decorative:true,fallback:initials});
+        label.append(input, portrait, element("span", member(id)));
         const sheet = state.sheets[id];
         if (!open && sheet) label.append(element("small", sheet === "attached" ? "Sheet attached" : "Sheet " + sheet));
         roster.append(label);

@@ -118,6 +118,97 @@ export function popupAction(title, content, key = title, {compact = false} = {})
   return trigger;
 }
 
+function mountActionFooter(dialog, statusId) {
+  const heading = dialog.querySelector(":scope > .record-heading");
+  const status = document.getElementById(statusId);
+  const body = document.createElement("div");
+  body.className = "dialog-action-body";
+  body.append(...[...dialog.childNodes].filter(node => node !== heading && node !== status));
+  const footer = document.createElement("footer");
+  footer.className = "dialog-action-footer";
+  const feedback = document.createElement("div");
+  const validation = document.createElement("p");
+  validation.setAttribute("role", "status");
+  validation.className = "dialog-validation";
+  if (status) feedback.append(status);
+  feedback.append(validation);
+  const action = document.createElement("button");
+  action.type = "button";
+  action.className = "primary";
+  footer.append(feedback, action);
+  dialog.append(body,footer);
+  dialog.classList.add("dialog-with-actions");
+  footer.hidden = true;
+  let form;
+  let submit;
+
+  function update() {
+    const candidates = dialog.open ? [...body.querySelectorAll("button")].filter(button =>
+      button.type === "submit" && button.form && button.form.method !== "dialog"
+      && !button.closest("[hidden], details:not([open])")) : [];
+    const inForm = candidates.filter(button => button.form === form);
+    const next = candidates.length === 1 ? candidates[0] : inForm.length === 1 ? inForm[0] : null;
+    if (next !== submit) {
+      submit?.removeAttribute("data-footer-submit");
+      submit = next;
+      submit?.setAttribute("data-footer-submit", "");
+      validation.textContent = "";
+    }
+    action.hidden = !submit;
+    if (submit) {
+      action.textContent = submit.textContent;
+      action.disabled = submit.disabled;
+    }
+    footer.hidden = !dialog.open || !(submit || validation.textContent || (status?.textContent && !status.hidden));
+  }
+
+  new MutationObserver(update).observe(body, {
+    subtree:true, childList:true, characterData:true, attributes:true, attributeFilter:["hidden", "disabled", "open"],
+  });
+  if (status) new MutationObserver(update).observe(status, {
+    subtree:true, childList:true, characterData:true, attributes:true, attributeFilter:["hidden"],
+  });
+  dialog.addEventListener("beforetoggle", () => queueMicrotask(update));
+  dialog.addEventListener("focusin", event => {
+    if (event.target.form && body.contains(event.target)) {
+      form = event.target.form;
+      update();
+    }
+  });
+  dialog.addEventListener("close", () => {
+    if (dialog.open) return;
+    form = undefined;
+    update();
+  });
+  dialog.addEventListener("invalid", event => {
+    if (event.target.form !== submit?.form || validation.textContent) return;
+    validation.textContent = event.target.validationMessage;
+    update();
+  }, true);
+  dialog.addEventListener("input", () => {
+    validation.textContent = "";
+    update();
+  });
+  action.addEventListener("click", () => submit?.click());
+}
+
+for (const [id, status] of [
+  ["scene-action-dialog", "scene-action-feedback"],
+  ["tactical-action-dialog", "tactical-action-status"],
+  ["utility-dialog", "utility-feedback"],
+  ["handler-plays-dialog", "handler-play-feedback"],
+  ["sheet-reset-dialog", "sheet-reset-feedback"],
+  ["mail-reader", ""],
+]) {
+  const dialog = document.getElementById(id);
+  if (dialog) mountActionFooter(dialog, status);
+}
+if (window.visualViewport) {
+  const sizeDialogs = () => document.documentElement.style.setProperty("--activity-dialog-height", window.visualViewport.height + "px");
+  sizeDialogs();
+  window.visualViewport.addEventListener("resize", sizeDialogs);
+}
+
 for (const dialog of document.querySelectorAll("dialog")) {
   let trigger;
   let label;

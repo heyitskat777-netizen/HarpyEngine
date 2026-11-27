@@ -124,8 +124,8 @@ export function playCard(play, caption, activate) {
   return card;
 }
 
-const playCategories = [["talk", "Talk", "◫"], ["fight", "Fight", "⚔"],
-  ["scan", "Scan", "⌁"], ["recover", "Recover", "◉"]];
+const playCategories = [["talk", "Talk", "◫"], ["scan", "Scan", "⌁"],
+  ["fight", "Fight", "⚔"], ["recover", "Recover", "◉"]];
 export function playRail(entries, preferred) {
   const rail = element("div", undefined, "play-rail");
   const register = element("div", undefined, "play-rail-register");
@@ -282,12 +282,28 @@ export function foundationUI(send, readTranscript, showBattlefield, battlefield,
   const scenePlayOptions = document.getElementById("scene-play-options");
   const scenePlayFeedback = document.getElementById("scene-play-feedback");
   const enterScene = document.getElementById("enter-scene-controls");
+  const sceneCommands = document.getElementById("scene-command-rail");
+  const emptyCategory = element("p", "No Plays are available in this category.", "terminal-feedback");
+  scenePlayOptions.after(emptyCategory);
+  emptyCategory.hidden = true;
+  let selectedCategory;
+  for (const [id, label, symbol] of playCategories) {
+    const command = dialogButton(label, () => openRoomPlays(view.room, "", false, null, id));
+    const icon = element("span", symbol, "play-category-icon");
+    icon.setAttribute("aria-hidden", "true");
+    command.prepend(icon);
+    command.dataset.playCategory = id;
+    sceneCommands.append(command);
+  }
+  const otherPlays = dialogButton("Other", () => openRoomPlays(view.room, "", false, null, "other"));
+  otherPlays.hidden = true;
+  sceneCommands.append(otherPlays);
   const locationsToggle = document.getElementById("locations-toggle");
   const communicationsToggle = document.getElementById("communications-toggle");
   const communicationsDesk = document.getElementById("communications-desk");
   for (const [trigger,content,id] of [
     [locationsToggle,document.getElementById("location-list"),"mobile-locations"],
-    [communicationsToggle,communicationsDesk.querySelector(".terminal-panel"),"communications-desk"],
+    [communicationsToggle,document.getElementById("communications-scene-list"),"communications-desk"],
   ]) {
     const dialog = document.getElementById(id);
     trigger.addEventListener("click",() => dialog.showModal());
@@ -319,8 +335,7 @@ export function foundationUI(send, readTranscript, showBattlefield, battlefield,
   const sceneDrafts = new Map();
   let draftIdentity;
   const handover = createShiftHandover(document.querySelector('[data-pane="handover"]'), {
-    openScene:openHandoverScene, openReceipt:openSceneReceipt,
-    openInvitation:openSceneInvitation, artwork, playName, decisionName,
+    openScene:openHandoverScene, artwork,
   });
 
   function sceneDraft(id) {
@@ -381,8 +396,8 @@ export function foundationUI(send, readTranscript, showBattlefield, battlefield,
     return view.folder === "scenes" && view.room === room;
   }
 
-  function dialogButton(label, action) {
-    const control = button(label, action);
+  function dialogButton(label, action, className) {
+    const control = button(label, action, className);
     control.setAttribute("aria-haspopup", "dialog");
     return control;
   }
@@ -484,8 +499,30 @@ export function foundationUI(send, readTranscript, showBattlefield, battlefield,
     openRoomPlays("relay", name, focusForm);
   }
 
-  async function openRoomPlays(roomId, name = "", focusForm = false, source = null) {
-    if (!player?.directory?.rooms.some(room => room.id === roomId)) return;
+  function filterScenePlays() {
+    let matching = false;
+    const categories = scenePlayOptions.querySelectorAll("[data-play-panel]");
+    for (const group of categories) {
+      group.hidden = Boolean(selectedCategory && group.dataset.playPanel !== selectedCategory);
+      matching ||= !group.hidden;
+    }
+    emptyCategory.hidden = scenePlayOptions.hidden || !selectedCategory || matching;
+    otherPlays.hidden = !scenePlayOptions.querySelector('[data-play-panel="other"]');
+  }
+
+  function showScenePlayPicker(room, category) {
+    selectedCategory = category;
+    const label = playCategories.find(([id]) => id === category)?.[1];
+    scenePlayTitle.textContent = label ? label + " Plays" : "Scene Plays";
+    document.getElementById("scene-play-location").textContent = room.name;
+    filterScenePlays();
+    if (!scenePlayPanel.open) scenePlayPanel.showModal();
+    scenePlayTitle.focus({preventScroll:true});
+  }
+
+  async function openRoomPlays(roomId, name = "", focusForm = false, source = null, category) {
+    const room = player?.directory?.rooms.find(item => item.id === roomId);
+    if (!room || room.archived_at != null) return;
     if (!viewingScene(roomId)) {
       navigate({folder:"scenes", room:roomId});
     }
@@ -493,7 +530,8 @@ export function foundationUI(send, readTranscript, showBattlefield, battlefield,
     if (player.active_scene?.id !== roomId) await playProjection;
     if (!viewingScene(roomId) || selection !== playSelection) return;
     if (player.active_scene?.id !== roomId) {
-      (enterScene.querySelector("button") ?? setup.querySelector("button"))?.focus();
+      if (room.joined) showScenePlayPicker(room, category);
+      else setup.querySelector("button")?.focus();
       return;
     }
     const requestedPlay = name.toLowerCase().replace(/[ _-]+/g, "_");
@@ -503,7 +541,6 @@ export function foundationUI(send, readTranscript, showBattlefield, battlefield,
     scenePlayFeedback.textContent = id && !choice ? "That Play is unavailable in this scene." : "";
     scenePlayFeedback.hidden = !scenePlayFeedback.textContent;
     if (choice?.matches("button")) {
-      revealPlay(choice);
       choice.click();
       const fields = document.getElementById("scene-action-fields");
       const target = fields.querySelector("select[name=target]");
@@ -515,9 +552,7 @@ export function foundationUI(send, readTranscript, showBattlefield, battlefield,
       }
       return;
     }
-    if (choice) revealPlay(choice);
-    const control = focusForm && choice?.querySelector("form :is(select, input, textarea, button)");
-    (control || choice?.firstElementChild || scenePlayTitle).focus();
+    showScenePlayPicker(room, category);
   }
 
   function openHandoverScene(room, target = {}) {
@@ -540,6 +575,8 @@ export function foundationUI(send, readTranscript, showBattlefield, battlefield,
       ? "This response is no longer available."
       : "Enter this scene or synchronize the terminal to retrieve its Plays.";
     scenePlayFeedback.hidden = false;
+    const scene = selectedRoom();
+    if (scene) showScenePlayPicker(scene);
   }
 
   function openSceneReceipt(room, receipt, choice) {
@@ -713,7 +750,7 @@ export function foundationUI(send, readTranscript, showBattlefield, battlefield,
     }
   }
 
-  function pilotRecordButton(pilot) {
+  function pilotRecordButton(pilot, compact) {
     const title = pilot.callsign + " | " + (pilot.status || "Unassigned");
     const card = button(title, () => navigate({folder:"profile", pilot:pilot.id, tacticalPilot:null}), "presence-file");
     card.dataset.pilot = pilot.id;
@@ -723,12 +760,13 @@ export function foundationUI(send, readTranscript, showBattlefield, battlefield,
     portrait.setAttribute("aria-hidden", "true");
     if (pilot.artwork) artwork.picture(portrait, pilot.artwork, {decorative:true, fallback:initials});
     const details = element("span");
-    details.append(element("strong", title), element("small", pilot.frame_name || pilot.frame));
+    details.append(element("strong", compact ? pilot.callsign : title));
+    if (!compact) details.append(element("small", pilot.frame_name || pilot.frame));
     card.replaceChildren(portrait, details);
     return card;
   }
 
-  function renderPilotList(list, pilots) {
+  function renderPilotList(list, pilots, compact = false) {
     const current = new Map([...list.querySelectorAll("button[data-pilot]")].map(card => [card.dataset.pilot, card]));
     const focused = list.contains(document.activeElement) ? document.activeElement.dataset.pilot : null;
     list.replaceChildren(...pilots.map(pilot => {
@@ -736,7 +774,7 @@ export function foundationUI(send, readTranscript, showBattlefield, battlefield,
       const previous = current.get(pilot.id);
       if (previous?.dataset.record === signature) return previous.parentElement;
       const row = element("li");
-      const card = pilotRecordButton(pilot);
+      const card = pilotRecordButton(pilot, compact);
       card.dataset.record = signature;
       row.append(card);
       return row;
@@ -756,7 +794,7 @@ export function foundationUI(send, readTranscript, showBattlefield, battlefield,
     const ids = current ? active?.pilot_ids ?? (room.id === "relay" ? player.scene?.pilot_ids : room.pilot_ids) ?? [] : [];
     const pilots = (player.cadre ?? []).filter(pilot => ids.includes(pilot.id));
     panel.hidden = !pilots.length;
-    renderPilotList(document.getElementById("present-pilot-list"), pilots);
+    renderPilotList(document.getElementById("present-pilot-list"), pilots, true);
     const cast = current && room.id === transcriptRoom ? sceneCast : [];
     castPanel.hidden = !cast.length;
     document.getElementById("scene-cast-list").replaceChildren(...cast.map(actor => {
@@ -1019,6 +1057,7 @@ export function foundationUI(send, readTranscript, showBattlefield, battlefield,
     directoryHeader.replaceChildren(tabs);
     const heading = element("div", undefined, "record-heading");
     heading.append(element("h2", view.mode === "archive" ? "Closed scene files" : view.mode === "mine" ? "Assigned scene files" : "Open scene files"));
+    if (!archived && data.can_create) heading.append(dialogButton("Start Scene", openStartScene, "primary"));
     directoryHeader.append(heading);
     archivePanel.hidden = !archived;
     directoryRooms.hidden = archived;
@@ -1113,10 +1152,14 @@ export function foundationUI(send, readTranscript, showBattlefield, battlefield,
       }
       label.append(input);
       const submit = element("button", room.joined ? "File transmission" : "Join and transmit", "primary");
+      submit.type = "submit";
       const status = element("p", undefined, "scene-composer-status");
       status.setAttribute("role", "status");
       const actions = element("div", undefined, "scene-compose-actions");
-      actions.append(status, submit);
+      const share = dialogButton("Share Intel", () => openShareIntel(selectedRoom()));
+      share.id = "compose-share-intel";
+      share.hidden = true;
+      actions.append(status, share, submit);
       form.append(label, mode, actions);
       submit.disabled = draft.pending;
       form.addEventListener("submit", async event => {
@@ -1154,7 +1197,7 @@ export function foundationUI(send, readTranscript, showBattlefield, battlefield,
           status.textContent = error.message;
         } finally {
           draft.pending = false;
-          const current = composer.querySelector(".scene-composer button");
+          const current = composer.querySelector(".scene-composer button[type=submit]");
           if (transcriptRoom === roomId && current) current.disabled = false;
           submit.disabled = false;
         }
@@ -1377,6 +1420,7 @@ export function foundationUI(send, readTranscript, showBattlefield, battlefield,
     const roomActions = document.getElementById("room-actions");
     roomActions.replaceChildren();
     if (intelStatus.dataset.room !== room?.id) {
+      document.getElementById("scene-direct-feedback").hidden = true;
       intelStatus.dataset.room = room?.id ?? "";
       intelStatus.textContent = "";
     }
@@ -1386,9 +1430,11 @@ export function foundationUI(send, readTranscript, showBattlefield, battlefield,
     renderScenePersonnel(room);
     const hasComposer = room?.joined && room.archived_at == null && player.stage === "active" && view.folder === "scenes";
     const activeScene = hasComposer && player.active_scene?.id === room.id ? player.active_scene : null;
-    scenePlayPanel.hidden = !hasComposer;
+    sceneCommands.hidden = !hasComposer;
+    if (!hasComposer && scenePlayPanel.open) scenePlayPanel.close();
     scenePlayOptions.hidden = !activeScene;
-    renderRoomPlays(activeScene);
+    renderRoomPlays(activeScene, roomActions);
+    filterScenePlays();
     enterScene.replaceChildren();
     if (hasComposer && !activeScene && room.play_active) {
       if (scenePlayFeedback.hidden) enterScene.append(element("p", "Retrieving this scene’s Plays."));
@@ -1400,7 +1446,9 @@ export function foundationUI(send, readTranscript, showBattlefield, battlefield,
         open.disabled = true;
         try {
           await send("enter-scene", {room:room.id});
-          if (selection === playSelection && viewingScene(room.id)) await openRoomPlays(room.id);
+          if (selection === playSelection && viewingScene(room.id)) {
+            await openRoomPlays(room.id, "", false, null, selectedCategory);
+          }
         } catch (error) {
           if (selection === playSelection) status.textContent = error.message;
         } finally {
@@ -1416,13 +1464,10 @@ export function foundationUI(send, readTranscript, showBattlefield, battlefield,
     }
     roomActions.append(dialogButton("Scene access", openSceneAccess));
     if (room.can_invite) roomActions.append(button("Invite to room", () => showInvite(room.id, room.name)));
-    if (hasComposer && player.intel_targets?.length) {
-      const share = button("Share Intel", () => openShareIntel(room));
-      share.setAttribute("aria-haspopup", "dialog");
-      roomActions.append(share);
-    }
+    const share = document.getElementById("compose-share-intel");
+    if (share) share.hidden = !hasComposer || !player.intel_targets?.length;
     if (room.can_end) {
-      const end = button("End Scene", () => openEndScene(room));
+      const end = button("End Scene", () => openEndScene(room), "warning-outline");
       end.setAttribute("aria-haspopup", "dialog");
       roomActions.append(end);
     }
@@ -1441,7 +1486,7 @@ export function foundationUI(send, readTranscript, showBattlefield, battlefield,
     if (choices.length || waiting) {
       const summary = element("div", undefined, "scene-assignment-copy");
       const owner = waiting?.waiting_on.join(", ") ?? (choices[0].role === "handler" ? "Handler" : player.callsign || "You");
-      summary.append(element("span", "HARPYENGINE · Waiting on " + owner, "eyebrow"),
+      summary.append(element("span", "HARPYENGINE · " + (waiting ? "Waiting on " + owner : "Your response required"), "eyebrow"),
         element("strong", playName(waiting?.play ?? choices[0].play)));
       assignedControls.append(summary);
       for (const [index,choice] of choices.entries()) {
@@ -1536,7 +1581,7 @@ export function foundationUI(send, readTranscript, showBattlefield, battlefield,
         }
         renderPilotBonds(actions, player);
         if (player.sheet_reset) {
-          const restart = button("Restart character", () => openSheetReset(player.sheet_reset));
+          const restart = button("Restart character", () => openSheetReset(player.sheet_reset), "warning-outline");
           restart.setAttribute("aria-haspopup","dialog");
           actions.append(restart);
         }
@@ -1822,6 +1867,7 @@ export function foundationUI(send, readTranscript, showBattlefield, battlefield,
 
   function render() {
     const handler = player?.stage === "handler";
+    if (handler && scenePlayPanel.open) scenePlayPanel.close();
     const canHandover = handler || player?.stage === "active";
     const canCampaignSetup = Boolean(player && openCampaignSetup);
     const canReviewDossiers = Boolean(player?.can_review_dossiers && setDossierVisible);
@@ -1851,7 +1897,7 @@ export function foundationUI(send, readTranscript, showBattlefield, battlefield,
     if (folderChanged) revealActiveFolder();
     if (folderChanged && view.folder === "campaign-setup") window.scrollTo(0, 0);
     back.hidden = !trail.length;
-    locationsToggle.hidden = !player?.directory;
+    locationsToggle.hidden = !player?.directory || view.folder === "scenes" && !handler;
     communicationsToggle.hidden = !player || (player.stage !== "active" && player.stage !== "handler");
     handover.setVisible(canHandover && view.folder === "handover");
     const handlerDesk = document.getElementById("handler-desk");
@@ -1899,6 +1945,7 @@ export function foundationUI(send, readTranscript, showBattlefield, battlefield,
   }
 
   return {
+    updateHandoverAssignments:handover.updateAssignments,
     setPortrayal(open) { openPortrayal = open; if (player) render(); },
     setCampaignSetup(open) { openCampaignSetup = open; if (player) render(); },
     setDossierReview(setVisible) { setDossierVisible = setVisible; if (player) render(); },

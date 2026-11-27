@@ -1,6 +1,7 @@
 import {decisionName, playCard, playName, playRail, renderRecordMetadata} from "/foundation-ui.js";
 import {catalog, renderPlaybookFields} from "/character-draft-ui.js";
 import {popupAction, renderDraftDialog, showSelectionText} from "/popup-ui.js";
+import {dispatchState} from "/mail-spool.js";
 
 let fieldSequence = 0;
 
@@ -543,21 +544,12 @@ function renderSceneAction(details, play, label, state, send) {
 
 export function renderScenePlays(target, scene, send, openBattlefieldPlay) {
   const actionDialog = document.getElementById("scene-action-dialog");
+  const picker = target.closest("dialog");
   const actionFields = document.getElementById("scene-action-fields");
   if (!scene && actionDialog?.open && actionDialog.dataset.role === "pilot") actionDialog.close();
-  const previousRail = target.querySelector(".play-rail");
-  const sameScene = previousRail && previousRail.dataset.playScene === scene?.id;
   if (actionDialog.open && actionDialog.dataset.role === "pilot" && actionDialog.dataset.room !== scene?.id) actionDialog.close();
   target.replaceChildren();
   if (!scene?.joined) return;
-  if (scene.safety) {
-    const {paused, own, revision} = scene.safety;
-    const safety = element("div");
-    safety.className = "scene-safety actions";
-    if (paused) safety.append(element("span", "Play is paused."));
-    safety.append(action(own ? "Clear my safety pause" : "Safety pause", () => send("scene-safety", {pause:!own, revision})));
-    target.append(safety);
-  }
   if (scene.locked) target.append(element("p", "A Play is in progress."));
   if (!scene.plays.length) target.append(element("p", "There are no Plays available in this scene."));
   const follow = scene.options?.flirt_followthrough;
@@ -575,7 +567,7 @@ export function renderScenePlays(target, scene, send, openBattlefieldPlay) {
       const assigned = [...(state?.choices ?? []), ...(related?.choices ?? [])];
       renderRecordMetadata(document.getElementById("scene-action-record"), {
         location:scene.name,
-        state:assigned.length ? "Action required" : state?.current?.state === "complete" ? "Filed"
+        state:assigned.length ? "Your response required" : state?.current?.state === "complete" ? "Filed"
           : state?.current?.state === "aborted" ? "Voided" : state?.waiting ? "Awaiting response" : "Play instructions",
         owner:assigned.length ? [...new Set(assigned.map(choice => choice.role === "handler" ? "Handler" : "You"))].join(" · ") : undefined,
       });
@@ -605,6 +597,7 @@ export function renderScenePlays(target, scene, send, openBattlefieldPlay) {
       actionDialog.dispatchEvent(new Event("beneath-source"));
     });
     const row = playCard({...play,label},play.trigger,() => {
+      if (picker?.open) picker.close();
       actionDialog.dataset.role = "pilot";
       actionDialog.dataset.play = play.id;
       actionDialog.dataset.room = scene.id;
@@ -620,7 +613,7 @@ export function renderScenePlays(target, scene, send, openBattlefieldPlay) {
     return {play,row};
   });
   if (entries.length) {
-    const rail = playRail(entries, sameScene ? previousRail.dataset.selectedPlayCategory : "recover");
+    const rail = playRail(entries);
     rail.dataset.playScene = scene.id;
     target.append(rail);
   }
@@ -1141,7 +1134,7 @@ export function renderHandlerSceneChoices(target, cards, send) {
     dialog.dataset.content = key;
     if (group.length) dialog.dataset.location = group[0].room_name;
     renderRecordMetadata(document.getElementById("scene-action-record"), {
-      location:dialog.dataset.location, state:group.length ? "Action required" : "No decision assigned",
+      location:dialog.dataset.location, state:group.length ? dispatchState({required:true}) : "No decision assigned",
       owner:group.length ? "Handler" : undefined,
     });
     dialog.dispatchEvent(new Event("beneath-source"));
@@ -1163,16 +1156,26 @@ export function renderHandlerSceneChoices(target, cards, send) {
   if (dialog?.open && dialog.dataset.role === "handler") {
     show(dialog.dataset.root, groups.get(dialog.dataset.root) ?? []);
   }
+  const reviews = element("ul", undefined, "handover-rows");
   for (const [root,group] of groups) {
-    const open = action(group[0].room_name + " · " + playName(group[0].play), () => {
+    const scene = group[0];
+    const label = playName(scene.play);
+    const open = action("Review ruling", () => {
       document.getElementById("scene-action-feedback").hidden = true;
       show(root,group);
       if (!dialog.open) dialog.showModal();
     });
     open.setAttribute("aria-haspopup","dialog");
+    open.setAttribute("aria-label", scene.room_name + " · " + label);
     open.dataset.playDecisions = group.map(card => card.choice.id).join(" ");
-    target.append(open);
+    const details = element("div", undefined, "handover-copy");
+    details.append(element("h3", label), element("p", scene.room_name, "handover-meta"),
+      element("p", dispatchState({required:true}), "eyebrow handover-status"));
+    const row = element("li", undefined, "handover-row");
+    row.append(details,open);
+    reviews.append(row);
   }
+  if (reviews.childElementCount) target.append(reviews);
 }
 
 function offDutySelect(form, key, label, options, {required = false, multiple = false} = {}) {

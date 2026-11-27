@@ -102,7 +102,19 @@ export function tacticalUI(read, send, updateRoster, openPilot, renderFrameWork)
     if (!visible) return;
     const pass = ++generation;
     try {
-      const latest = await read();
+      let latest = await read();
+      if (!visible || pass !== generation) return;
+      const move = latest.actions.find(item => item.id === "move");
+      if (selection === "move" && move) {
+        const previous = state?.actions.find(item => item.id === "move");
+        const sameTurn = latest.revision === state?.revision && latest.encounter?.turn === state?.encounter?.turn;
+        if (sameTurn && previous?.range.cells && JSON.stringify(previous.actor) === JSON.stringify(move.actor)
+          && previous.frame === move.frame) {
+          move.range.cells = previous.range.cells;
+        } else {
+          latest = await read(true);
+        }
+      }
       if (!visible || pass !== generation) return;
       const changed = JSON.stringify(state) !== JSON.stringify(latest);
       if (menu.open && (state?.busy !== latest.busy || state?.encounter?.turn !== latest.encounter?.turn)) menu.close();
@@ -130,6 +142,7 @@ export function tacticalUI(read, send, updateRoster, openPilot, renderFrameWork)
     status("");
     if (!playDialog.open) playDialog.showModal();
     render();
+    if (selection === "move") reload();
     playFields.querySelector("form :is(select, input, textarea, button)")?.focus();
   }
 
@@ -269,6 +282,8 @@ export function tacticalUI(read, send, updateRoster, openPilot, renderFrameWork)
     const [maxX, maxY] = state.board.maximum;
     board.style.setProperty("--columns", maxX - minX + 1);
     board.toggleAttribute("data-facility", Boolean(state.facility));
+    const destinations = action?.id === "move" && action.range.cells
+      ? new Set(action.range.cells.map(cell => cell.join(","))) : null;
     const cells = [];
     for (let y = minY; y <= maxY; y++) {
       for (let x = minX; x <= maxX; x++) {
@@ -276,6 +291,7 @@ export function tacticalUI(read, send, updateRoster, openPilot, renderFrameWork)
         const here = state.actors.filter(actor => actor.cell?.join() === cell.join());
         const place = state.locations.find(location => location.cell.join() === cell.join());
         const validActor = here.find(actor => action?.targets?.some(entry => entry.id === actor.id));
+        const currentActor = here.some(actor => actor.id === state.encounter?.active_id);
         const square = node("div", undefined, "tactical-square");
         const tile = node("button", undefined, "tactical-cell");
         tile.type = "button";
@@ -287,8 +303,15 @@ export function tacticalUI(read, send, updateRoster, openPilot, renderFrameWork)
         }
         if (place) tile.dataset.location = place.kind;
         const terrain = row?.[x - minX];
-        tile.disabled = !(action?.id === "move" && action.range.kind === "board" && terrain !== "w" || validActor);
-        tile.setAttribute("aria-label", ["Cell " + x + ", " + y, terrain !== "." && terrainNames[terrain], place?.name, ...here.map(actor => actor.label)].filter(Boolean).join(" · "));
+        const reachable = destinations?.has(cell.join(","));
+        const canMoveHere = destinations ? reachable : action?.id === "move" && action.range.kind === "board" && terrain !== "w";
+        tile.disabled = !(canMoveHere || validActor);
+        tile.toggleAttribute("data-active-unit", currentActor);
+        tile.toggleAttribute("data-reachable", Boolean(reachable));
+        tile.toggleAttribute("data-valid-target", Boolean(validActor));
+        tile.setAttribute("aria-label", ["Cell " + x + ", " + y, terrain !== "." && terrainNames[terrain],
+          place?.name, ...here.map(actor => actor.label), currentActor && "Active unit",
+          reachable && "Reachable", validActor && "Valid target"].filter(Boolean).join(" · "));
         if (action?.id === "move" && destination?.join() === cell.join() || validActor && target === validActor.id) {
           tile.setAttribute("aria-pressed", "true");
         }
@@ -745,11 +768,9 @@ export function tacticalUI(read, send, updateRoster, openPilot, renderFrameWork)
         : "No pilots remain in the current turn order"
       : encounter.placement_pending ? "Awaiting placement review"
         : encounter.joined ? "Preparing encounter" : encounter.can_join ? "Admission open" : "Admission pending";
-    renderRecordMetadata(turnStrip, {
-      location:state.facility?.name ?? state.title, state:status,
-      owner:encounter.running ? encounter.enemy_turn ? "Handler" : encounter.active
-        : encounter.can_open || encounter.placement_pending ? "Handler" : undefined,
-    });
+    turnStrip.hidden = false;
+    turnStrip.textContent = status;
+    turnStrip.toggleAttribute("data-your-turn", Boolean(encounter.yours && encounter.running));
     if (encounter.running) {
       if (encounter.can_end_turn) dispatch("End turn", "end-turn");
       if (encounter.can_close) dispatch("Close turns", "close-turns");
@@ -873,7 +894,7 @@ export function tacticalUI(read, send, updateRoster, openPilot, renderFrameWork)
     toolbar.replaceChildren();
     receipt.replaceChildren();
     if (state.encounter) renderEncounter(state.encounter);
-    else renderRecordMetadata(turnStrip,{location:state.title});
+    else turnStrip.hidden = true;
     const own = state.roster?.find(pilot => pilot.controlled)?.label ?? "You";
     const owners = state.choices.map(choice => ({pilot:own, handler:"Handler", opponent:"Drill opponent"})[choice.role]);
     renderRecordMetadata(playRecord, {
@@ -968,7 +989,7 @@ export function tacticalUI(read, send, updateRoster, openPilot, renderFrameWork)
         const move = node("button", availableMove.label);
         move.type = "button";
         move.setAttribute("aria-pressed", String(action?.id === "move"));
-        move.addEventListener("click", () => { selection = "move"; render(); });
+        move.addEventListener("click", () => { selection = "move"; render(); reload(); });
         toolbar.append(move);
       }
       const plays = state.actions.filter(item => item.id !== "move");

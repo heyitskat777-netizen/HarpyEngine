@@ -1,4 +1,12 @@
-export function mailSpool(inbox, list, reader, badge, assignmentsBadge, pictureSender) {
+export function dispatchState(entry) {
+  if (entry.required && entry.owned !== false) return "Your response required";
+  if (entry.required || entry.waiting) {
+    return entry.owner ? "Waiting on " + entry.owner : entry.status ?? "Waiting for a response";
+  }
+  return entry.status ?? "Filed";
+}
+
+export function mailSpool(inbox, list, reader, badge, pictureSender, onAssignments) {
   const groups = new Map();
   const tabs = [...inbox.querySelectorAll("[data-dispatch-folder]")];
   const decisionCount = document.getElementById("decision-count");
@@ -15,9 +23,10 @@ export function mailSpool(inbox, list, reader, badge, assignmentsBadge, pictureS
   let deliveries = new Map();
   let viewed = new Set();
   let openedBy;
+  let assignmentRows = [];
   const folderOf = entry => entry.required && entry.owned !== false ? "assigned"
     : entry.required || entry.waiting ? "waiting" : "history";
-  const allEntries = () => [...groups.values()].flat();
+  const allEntries = () => [...new Map([...groups.values()].flat().map(entry => [entry.id, entry])).values()];
 
   function mark(id) {
     viewed = new Set([...viewed, id].slice(-180));
@@ -26,15 +35,27 @@ export function mailSpool(inbox, list, reader, badge, assignmentsBadge, pictureS
     }
   }
 
+  function openEntry(entry) {
+    mark(entry.id);
+    openedBy = entry.id;
+    if (entry.file) selected = entry.file;
+    render();
+    if (entry.open) entry.open();
+    else if (entry.file && selected) {
+      document.getElementById("mail-reader-title").textContent = entry.title ?? "Dispatch record";
+      if (!reader.open) reader.showModal();
+      reader.querySelector(`[data-mail-file="${CSS.escape(entry.file)}"]`)?.focus();
+    }
+  }
+
   function render() {
     const entries = allEntries();
     const visible = entries.filter(entry => folderOf(entry) === folder);
     const assigned = entries.filter(entry => folderOf(entry) === "assigned");
-    const unreadPending = assigned.filter(entry => !viewed.has(entry.id));
     const focused = list.contains(document.activeElement) ? document.activeElement.dataset.mailId : null;
     decisionCount.textContent = String(assigned.length);
     waitingCount.textContent = String(entries.filter(entry => folderOf(entry) === "waiting").length);
-    if (assignmentsBadge) assignmentsBadge.textContent = decisionCount.textContent;
+    badge.textContent = assigned.length || "";
     for (const tab of tabs) tab.setAttribute("aria-pressed", String(tab.dataset.dispatchFolder === folder));
     const files = [...reader.querySelectorAll("[data-mail-file]")];
     if (!entries.some(entry => entry.file === selected) || !files.some(file => file.dataset.mailFile === selected)) selected = undefined;
@@ -53,8 +74,7 @@ export function mailSpool(inbox, list, reader, badge, assignmentsBadge, pictureS
       row.dataset.required = String(assigned);
       const unread = assigned && !viewed.has(entry.id);
       row.dataset.unread = String(unread);
-      const state = assigned ? "RESPONSE REQUIRED" : entry.status
-        ?? (folder === "waiting" ? "AWAITING " + (entry.owner ?? "ASSIGNED PRINCIPAL") : undefined);
+      const state = dispatchState(entry);
       for (const [value, role] of [[subject, "subject"], [state, "status"]]) {
         if (!value) continue;
         const text = document.createElement("span");
@@ -64,7 +84,7 @@ export function mailSpool(inbox, list, reader, badge, assignmentsBadge, pictureS
       }
       const metadata = [["From",entry.sender ?? "Foundation operations"]];
       if (entry.recipient) metadata.push(["To",entry.recipient]);
-      if (entry.owner || entry.required) metadata.push(["Assigned to",entry.owner ?? callsign]);
+      if (assigned) metadata.push(["Assigned to",entry.owner ?? callsign]);
       if (entry.location) metadata.push(["Scene",entry.location]);
       const details = document.createElement("span");
       details.className = "mail-metadata";
@@ -106,18 +126,7 @@ export function mailSpool(inbox, list, reader, badge, assignmentsBadge, pictureS
         time.textContent = date.toLocaleString(undefined,{dateStyle:"medium",timeStyle:entry.timeStyle ?? "short"});
         open.append(time);
       }
-      open.addEventListener("click", () => {
-        mark(entry.id);
-        openedBy = entry.id;
-        if (entry.file) selected = entry.file;
-        render();
-        if (entry.open) entry.open();
-        else if (entry.file && selected) {
-          document.getElementById("mail-reader-title").textContent = entry.title ?? "Dispatch record";
-          if (!reader.open) reader.showModal();
-          reader.querySelector(`[data-mail-file="${CSS.escape(entry.file)}"]`)?.focus();
-        }
-      });
+      open.addEventListener("click", () => openEntry(entry));
       row.append(open);
       return row;
     }));
@@ -126,7 +135,10 @@ export function mailSpool(inbox, list, reader, badge, assignmentsBadge, pictureS
       empty.textContent = emptyLabels[folder];
       list.append(empty);
     }
-    badge.textContent = unreadPending.length || "";
+    if (assigned.length !== assignmentRows.length || assigned.some((entry,index) => entry !== assignmentRows[index])) {
+      assignmentRows = assigned;
+      onAssignments?.(assigned.map(entry => ({...entry, review:() => openEntry(entry)})));
+    }
     if (focused) focusRow(focused);
   }
 
@@ -173,10 +185,10 @@ export function mailSpool(inbox, list, reader, badge, assignmentsBadge, pictureS
     hasDeliveryTarget(key, recipient) {
       return allEntries().some(entry => entry.deliveryKey === key && entry.recipient === recipient);
     },
-    opened(assigned = false) {
+    opened() {
       if (!inbox.hidden) {
         const entries = allEntries();
-        if (assigned || entries.some(entry => folderOf(entry) === "assigned")) folder = "assigned";
+        if (entries.some(entry => folderOf(entry) === "assigned")) folder = "assigned";
         else if (entries.some(entry => folderOf(entry) === "waiting")) folder = "waiting";
         else folder = entries.length ? "history" : "assigned";
         selected = undefined;

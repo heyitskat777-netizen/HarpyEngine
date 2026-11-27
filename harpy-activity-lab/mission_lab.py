@@ -1488,7 +1488,8 @@ def serve(
                             self.send_json(HTTPStatus.OK, {"deliveries": deliveries})
                         else:
                             self.send_json(
-                                HTTPStatus.OK, {"receipts": [identity for identity, _, _ in receipts]}
+                                HTTPStatus.OK,
+                                {"receipts": [identity for identity, _, _ in receipts]},
                             )
                         return
                     receipt = self.read_dm_receipt(campaign, viewer, match[1])
@@ -1568,11 +1569,20 @@ def serve(
                         record = self.session_zero_preview(campaign, viewer, adapter)
                     if match[1] == "session-zero" and record.get("bot_managed"):
                         visible = set(record["members"]) | set(record.get("group_options", ()))
-                        record["member_names"] = {
-                            person["id"]: person["name"]
-                            for person in setup.campaign_members(viewer)
+                        people = [
+                            person for person in setup.campaign_members(viewer)
                             if person["id"] in visible
+                        ]
+                        record["member_names"] = {
+                            person["id"]: person["name"] for person in people
                         }
+                        if record.get("can_set_group") and setup.records:
+                            artwork = setup.records.artwork()
+                            record["member_portraits"] = {}
+                            for person in people:
+                                profile = setup.store.draft(viewer, int(person["id"]))
+                                if profile and (portrait := artwork.get(("pilot", profile["id"]))):
+                                    record["member_portraits"][person["id"]] = portrait
                         if first := record.get("first_briefing"):
                             first["paired_ai_ready"] = paired_ai_ready(campaign)
                             first["ai_on"] = bool(
@@ -1778,7 +1788,8 @@ def serve(
                     self.send_json(
                         HTTPStatus.OK,
                         battlefield.view(
-                            DRILL_OPPONENT if not native and viewer == OTHER else viewer
+                            DRILL_OPPONENT if not native and viewer == OTHER else viewer,
+                            destinations=parse_qs(request.query).get("destinations") == ["1"],
                         ),
                     )
                 except SignInError as error:

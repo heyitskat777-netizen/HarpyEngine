@@ -253,7 +253,7 @@ class Battlefield:
             .limit(11)
         ).all()
 
-    def view(self, viewer):
+    def view(self, viewer, *, destinations=False):
         self.authorize(viewer)
         world = self.world.get(viewer)
         with self.store.engine.connect() as connection:
@@ -292,6 +292,10 @@ class Battlefield:
                     incarnation=sheet.character_id,
                 )
                 actions = self.actions(connection, viewer, state, scene, pilot_ref, moves, combat)
+            if destinations:
+                self.project_destinations(
+                    connection, viewer, state, actions, world["world"]["board"]
+                )
             declarations = (
                 self.declarations(viewer, state, bound, combat) if sheet and not busy else {}
             )
@@ -466,6 +470,27 @@ class Battlefield:
             "target_ended": target_ended,
             "busy": busy,
         }
+
+    def project_destinations(self, connection, viewer, state, actions, board, accessible=None):
+        move = next((action for action in actions if action["id"] == "move"), None)
+        if not move:
+            return
+        actor = ActorRef.model_validate(move["actor"])
+        minimum, maximum = board["minimum"], board["maximum"]
+        cells = []
+        for y in range(minimum[1], maximum[1] + 1):
+            for x in range(minimum[0], maximum[0] + 1):
+                if accessible and not accessible((x, y)):
+                    continue
+                try:
+                    proposal_context(
+                        self.game, connection, viewer, state, self.channel,
+                        actor, (x, y), move["frame"], "Preview movement destination.",
+                    )
+                except (WorkflowError, ValueError):
+                    continue
+                cells.append([x, y])
+        move["range"]["cells"] = cells
 
     def actions(self, connection, viewer, state, scene, pilot, movement, battle):
         available = []

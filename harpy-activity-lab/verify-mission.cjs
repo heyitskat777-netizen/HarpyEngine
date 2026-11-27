@@ -1089,7 +1089,6 @@ async function verifyResponsiveHud(browser, server) {
       await activity.waitForFunction(expected => innerWidth === expected, width);
       for (const theme of ["dark", "light"]) {
         context = width + " px " + theme;
-        let shortcutSpacing;
         if (await view.locator("html").getAttribute("data-theme") !== theme) {
           await view.getByRole("button", {name:"Toggle light and dark mode"}).click();
         }
@@ -1104,14 +1103,7 @@ async function verifyResponsiveHud(browser, server) {
           await checkFolderBar(label);
           const current = pane(id);
           await checkPanel(current, label);
-          const shortcuts = await view.locator(".rail-shortcuts").evaluate(row => {
-            const [locations, roster] = [...row.querySelectorAll("button")].map(button => button.getBoundingClientRect());
-            return {gap:roster.left - locations.right, top:roster.top - locations.top, height:row.getBoundingClientRect().height};
-          });
-          shortcutSpacing ??= shortcuts;
-          if (Object.keys(shortcuts).some(key => !closeEnough(shortcuts[key], shortcutSpacing[key]))) {
-            issues.push({context, name:label + " shortcut spacing", shortcuts});
-          }
+          assert(await view.locator(".masthead #communications-toggle").isVisible());
           assert.equal(await view.locator(".layout > aside, #pilot-footer").count(), 0);
           assert.equal(await view.getByRole("button", {name:"Personnel records",exact:true}).count(), id === "profile" ? 1 : 0);
           if (id === "profile") {
@@ -1197,12 +1189,9 @@ async function verifyResponsiveHud(browser, server) {
               await checkPanel(current, "Scene Archive");
               await current.getByRole("button", {name:"Locations", exact:true}).click();
             }
-            const locations = view.locator("#mobile-locations");
-            await view.locator("#locations-toggle").click();
-            await checkPanel(locations, "Locations", true);
-            const start = locations.getByRole("button", {name:"Start Scene", exact:true});
+            assert.equal(await view.locator("#locations-toggle").isVisible(),false);
+            const start = current.getByRole("button", {name:"Start Scene", exact:true});
             if (await start.isVisible()) await modal(start, "#start-scene-dialog", "Close Start Scene", "Start Scene");
-            if (await locations.isVisible()) await locations.getByRole("button", {name:"Close Locations",exact:true}).click();
           }
         }
         await view.getByRole("button", {name:"Inbox",exact:true}).click();
@@ -1213,6 +1202,8 @@ async function verifyResponsiveHud(browser, server) {
         const relay = view.getByRole("button", {name:"Open Relay operations",exact:true});
         if (await relay.isVisible()) await relay.click();
         await checkPanel(view.locator("#room-pane"), "Scene transcript");
+        await view.locator("#scene-command-rail").getByRole("button",{name:"Recover",exact:true}).click();
+        await checkPanel(view.locator("#scene-play-panel"), "Scene Play picker", true);
         await modal(view.locator('#scene-play-options button[data-play="keep_your_head"]'), "#scene-action-dialog", "Close scene Play", "Scene Play popup");
         const comms = view.locator("#communications-toggle");
         await comms.click();
@@ -1238,6 +1229,7 @@ async function verifyResponsiveHud(browser, server) {
           issues.push({context,name:"Communications contact rows",contactRows});
         }
         await modal(contacts.first(), "#communication-dialog", "Close private communication", "Private communications");
+        await desk.locator("#communications-contacts button:focus").waitFor();
         if (await desk.isVisible()) {
           await desk.getByRole("button", {name:"Close Communications",exact:true}).click();
         }
@@ -1685,10 +1677,11 @@ async function verifyBoundRoster(browser, server, owner, other, loadSetup, postS
   await handler.view.getByRole("button",{name:"Synchronize terminal",exact:true}).click();
   await openHandlerPlays();
   await handlerBook.getByLabel(pilots[0].callsign,{exact:true}).check();
-  await handlerBook.getByRole("button",{name:"Start Handler Play",exact:true}).click();
+  const handlerDialog = handler.view.locator("#handler-plays-dialog");
+  await handlerDialog.getByRole("button",{name:"Start Handler Play",exact:true}).click();
   await handlerBook.getByLabel("Handler Play",{exact:true}).selectOption("brief");
   await handlerBook.getByLabel("Information or consequence to communicate",{exact:true}).fill("The west relay has lost power.");
-  await handlerBook.getByRole("button",{name:"File effect",exact:true}).click();
+  await handlerDialog.getByRole("button",{name:"File effect",exact:true}).click();
   await handler.view.locator("#handler-play-feedback").getByText("Effect filed.",{exact:true}).waitFor();
   await closeHandlerPlays();
   if (handlerPlaysCheck) {
@@ -2135,6 +2128,9 @@ async function verifyP2Battlefield(browser, server, previous) {
   await send(active,"move",{...movement,destination:[4,0]},409);
   await send(active,"move",{...movement,destination:[0,7]},409);
   await active.view.getByRole("button",{name:"Move",exact:true}).click();
+  await active.view.locator("#tactical-turn-strip").getByText(/Round 1.*Your turn/).waitFor();
+  await active.view.locator("#tactical-grid [data-active-unit]").waitFor();
+  await active.view.locator(`[data-coordinate="${movement.destination.join(",")}"][data-reachable]`).waitFor();
   assert(await active.view.getByRole("button",{name:/^Cell 4, 0 · Wall/}).isDisabled());
   await active.view.getByRole("button",{name:/^Cell 1, 1/}).click();
   await active.view.getByLabel("Describe the movement",{exact:true}).fill(movement.account);
@@ -2298,10 +2294,53 @@ async function verifyRosterBattlefield(browser, server, request) {
   await submit(waiting,"move",payload,409);
   await submit(waiting,"end-turn",{revision:current.revision},409);
   await active.view.getByRole("button",{name:"Move",exact:true}).click();
+  await active.view.locator("#tactical-turn-strip").getByText(/Round 1.*Your turn/).waitFor();
+  await active.view.locator("#tactical-grid [data-active-unit]").waitFor();
+  await active.view.locator(`[data-coordinate="${dest.join(",")}"][data-reachable]`).waitFor();
   await active.view.getByRole("button",{name:new RegExp(`^Cell ${dest.join(", ")}`)}).click();
   await active.view.getByLabel("Describe the movement",{exact:true}).fill(payload.account);
   await active.view.getByRole("button",{name:"Confirm move",exact:true}).click();
   await waitFor(waiting, view => view.actors.find(actor => actor.label === actorName).cell.join() === dest.join());
+  if (process.argv.includes("--hud-only")) {
+    const contactFor = async (pilot, name) => {
+      const response = await request(pilot,"/api/player-setup");
+      assert.equal(response.status,200);
+      return (await response.json()).communications.find(contact => contact.label === name);
+    };
+    const recipient = await contactFor(active, otherName);
+    const sender = await contactFor(waiting, actorName);
+    const desk = active.view.locator("#communications-desk");
+    const thread = active.view.locator("#communication-dialog");
+    const contact = desk.locator(`[data-contact="${recipient.id}"]`);
+    await active.view.locator("#communications-toggle").click();
+    await contact.click();
+    const text = "I reached the diagonal square.";
+    await thread.getByLabel("Outgoing transmission",{exact:true}).fill(text);
+    const posted = active.page.waitForResponse(response =>
+      response.request().method() === "POST" && new URL(response.url()).pathname.startsWith("/api/communications/"));
+    await thread.getByRole("button",{name:"Transmit",exact:true}).click();
+    const result = await posted;
+    assert.equal(result.status(),200,await result.text());
+    const entry = (await result.json()).entry;
+    await thread.getByText(text,{exact:true}).waitFor();
+    assert(!await thread.getByText("✓ Discord alert sent",{exact:true}).isVisible());
+    await thread.getByRole("button",{name:"Back to Comms",exact:true}).click();
+    await desk.locator(`[data-contact="${recipient.id}"]:focus`).waitFor();
+    await active.page.route(url => url.pathname === "/api/dm-receipts" && url.searchParams.get("view") === "delivery",
+      route => route.fulfill({json:{deliveries:[{kind:"communication",record:String(entry),recipients:[{status:"sent",name:otherName}]}]}}));
+    await contact.click();
+    await thread.locator(`[data-message="${entry}"]`).getByText("✓ Discord alert sent",{exact:true}).waitFor();
+    await waiting.view.getByRole("button",{name:"Synchronize terminal",exact:true}).click();
+    await waiting.view.locator("#communications-unread").waitFor();
+    await waiting.view.locator("#communications-toggle").click();
+    const unreadContacts = waiting.view.locator("#communications-contacts button");
+    assert.equal(await unreadContacts.first().getAttribute("data-contact"),sender.id);
+    await unreadContacts.first().click();
+    await waiting.view.locator("#communication-history").getByText(text,{exact:true}).waitFor();
+    await waiting.view.locator("#communications-unread").waitFor({state:"hidden"});
+    console.log("HarpyEngine marked the active unit and reachable diagonal, rejected a wrong-turn move, and saved the confirmed position. Comms returned focus, prioritized unread traffic, and rendered a simulated Discord delivery on its exact message.");
+    return null;
+  }
   const attacking = await state(active);
   const assault = attacking.actions.find(action => action.id === "all_out_assault");
   assert(assault.targets.some(target => target.label === otherName));
@@ -2583,6 +2622,9 @@ async function mainTest() {
       await view.getByRole("button", {name:"Campaign Setup", exact:true}).click();
       const pane = view.locator('[data-pane="campaign-setup"]');
       await pane.getByRole("heading", {name:"Session Zero", exact:true}).waitFor();
+      const next = pane.getByRole("link", {name:"Waiting on RELAY TWO’s sheet →", exact:true});
+      await next.click();
+      assert(await pane.getByRole("heading", {name:"Session Zero", exact:true}).evaluate(node => node === document.activeElement));
       await pane.getByText("No open reviewed scenes are available to you.").waitFor();
       await pane.getByText("gpt-6.1-sol", {exact:true}).waitFor();
       assert.equal(await pane.locator("details, summary").count(), 0);
@@ -2659,7 +2701,7 @@ async function mainTest() {
       const row = inbox.getByRole("button", {name:"Mission dispatch",exact:true});
       const record = view.locator("#mail-reader");
       await assigned.click();
-      await row.getByText("RESPONSE REQUIRED", {exact:true}).waitFor();
+      await row.getByText("Your response required", {exact:true}).waitFor();
       const before = Number(await assigned.locator("#decision-count").textContent());
       assert(before > 0);
       assert(Number(await view.locator("#inbox-count").textContent()) > 0);
@@ -2669,12 +2711,17 @@ async function mainTest() {
       assert.equal(await row.count(),0);
       await history.click();
       assert.equal(await row.count(),0);
-      await assigned.click();
-      await row.click();
+      await inbox.getByRole("button",{name:"Close inbox",exact:true}).click();
+      const handover = view.locator('[data-pane="handover"]');
+      await handover.getByRole("button",{name:"Review Mission dispatch",exact:true}).click();
+      await record.getByRole("heading",{name:"Mission dispatch",exact:true}).waitFor();
+      assert.equal(Number(await view.locator("#inbox-count").textContent()), before);
       await record.getByRole("button", {name:"Accept mission",exact:true}).click();
       await record.getByText("RESPONSE FILED · Accepted",{exact:true}).waitFor();
       assert.equal(await record.getByRole("button", {name:"Accept mission",exact:true}).count(),0);
       await record.getByRole("button", {name:"Close dispatch record",exact:true}).click();
+      await view.locator("#inbox-toggle").click();
+      await assigned.click();
       assert.equal(await row.count(),0);
       assert.equal(Number(await assigned.locator("#decision-count").textContent()),before - 1);
       await waiting.click();
@@ -2683,12 +2730,29 @@ async function mainTest() {
       await row.getByText("Accepted",{exact:true}).waitFor();
       assert.equal(await view.locator("#inbox-count").textContent(),"");
       assert.equal(await row.locator("..").getAttribute("data-unread"),"false");
+      await inbox.getByRole("button",{name:"Close inbox",exact:true}).click();
+      await view.getByRole("button",{name:"Scenes",exact:true}).click();
+      await view.getByRole("button",{name:"Open Relay operations",exact:true}).click();
+      const commands = view.locator("#scene-command-rail");
+      await commands.getByRole("button",{name:"Recover",exact:true}).click();
+      const picker = view.getByRole("dialog",{name:"Recover Plays",exact:true});
+      await picker.getByRole("button",{name:"Keep Your Head",exact:true}).click();
+      assert.equal(await picker.isVisible(),false);
+      const play = view.locator("#scene-action-dialog");
+      const roll = play.locator(".dialog-action-footer").getByRole("button",{name:"Roll Keep Your Head",exact:true});
+      await roll.click();
+      await play.locator(".dialog-validation").getByText(/.+/).waitFor();
+      assert(await roll.evaluate(button => {
+        const box = button.getBoundingClientRect();
+        return box.top >= 56 && box.bottom <= innerHeight;
+      }));
+      await play.getByRole("button",{name:"Close scene Play",exact:true}).click();
       await page.context().close();
       const reopened = await openPilot(browser, server, "invited");
       await reopened.view.locator('[data-dispatch-folder="history"]').click();
       await reopened.view.getByRole("button", {name:"Mission dispatch",exact:true}).getByText("Accepted",{exact:true}).waitFor();
       assert.equal(await reopened.view.locator("#inbox-count").textContent(),"");
-      console.log("The synthetic mission left Assigned when recorded, reduced the count, and survived reopening in History.");
+      console.log("Shift Handover opened the exact mission, which left Assigned and survived reopening in History. Recover opened the native Play popup with a visible validation footer.");
       return;
     }
     if (dmDeliveryCheck) {
@@ -2951,6 +3015,7 @@ async function mainTest() {
       }
       if (rosterBattlefieldCheck) {
         const saved = await verifyRosterBattlefield(browser, server, request);
+        if (!saved) return;
         await Promise.all(browser.contexts().map(context => context.close()));
         await stopServer(server);
         server = await startServer();

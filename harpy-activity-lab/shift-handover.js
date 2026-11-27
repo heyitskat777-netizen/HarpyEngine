@@ -1,3 +1,5 @@
+import {dispatchState} from "/mail-spool.js";
+
 const markerPrefix = "foundation-handover:";
 const seenReceiptLimit = 100;
 
@@ -7,7 +9,6 @@ function element(tag, text, className) {
   if (className) item.className = className;
   return item;
 }
-
 function button(label, action, primary = false) {
   const control = element("button", label, primary ? "primary" : undefined);
   control.type = "button";
@@ -92,23 +93,27 @@ export function handoverSceneRows(player, markers = new Map()) {
   }).sort((a,b) => (b.latest?.time ?? 0) - (a.latest?.time ?? 0) || a.name.localeCompare(b.name));
 }
 
-export function createShiftHandover(target, {openScene, openReceipt, openInvitation, artwork, playName, decisionName}) {
+export function createShiftHandover(target, {openScene, artwork}) {
   const heading = element("header", undefined, "handover-heading");
   const pilot = element("p", undefined, "eyebrow");
   const title = element("h2", "Shift Handover");
   const intro = element("div", undefined, "handover-section-heading");
   const unread = element("span", undefined, "eyebrow");
   const sceneList = element("ul", undefined, "handover-rows");
-  const secondary = element("section", undefined, "handover-secondary");
+  const assigned = element("section", undefined, "handover-assigned");
+  const assignedRows = element("ul", undefined, "handover-rows");
   heading.append(pilot,title);
   intro.append(element("h3", "Scene activity"), unread);
-  target.append(heading,intro,sceneList,secondary);
+  assigned.append(element("h3", "Your response required"), assignedRows);
+  assigned.hidden = true;
+  target.append(heading,assigned,intro,sceneList);
   target.classList.add("handover");
   let player;
   let mailbox;
   let visible = true;
   let markers = new Map();
   let rendered;
+  let assignments = [];
 
   function portrait(author, art, bot = false) {
     const initials = Array.from(author?.trim() || "").slice(0,2).join("") || "·";
@@ -140,16 +145,8 @@ export function createShiftHandover(target, {openScene, openReceipt, openInvitat
     if (status) copy.append(element("p", status, "eyebrow handover-status"));
     details.append(portrait(recent?.author,recent?.portrait,recent?.bot),copy);
     const actions = element("div", undefined, "handover-actions");
-    if (room.pending.length) {
-      const choice = room.pending[0];
-      const label = "Review " + playName(choice.play);
-      const review = button(label, () => openReceipt(room.id, choice.receipt, choice.id), true);
-      review.dataset.handoverAction = "review";
-      review.setAttribute("aria-label", label + " · " + decisionName(choice.kind) + " · " + room.name);
-      actions.append(review);
-    }
     const label = room.firstUnread ? "Read from first unread" : room.latest ? "Resume scene" : "Open scene";
-    const open = button(label, () => openScene(room.id, room.firstUnread ?? {}), !room.pending.length && room.unread > 0);
+    const open = button(label, () => openScene(room.id, room.firstUnread ?? {}), !assignments.length && room.unread > 0);
     open.dataset.handoverAction = "open";
     open.setAttribute("aria-label", label + " · " + room.name);
     actions.append(open);
@@ -157,13 +154,19 @@ export function createShiftHandover(target, {openScene, openReceipt, openInvitat
     return row;
   }
 
-  function invitationRow(invite) {
+  function assignmentRow(entry,index) {
     const row = element("li", undefined, "handover-row");
     const details = element("div", undefined, "handover-copy");
-    details.append(element("h4", invite.name),element("p", "Waiting on your response", "eyebrow"));
-    const review = button("Review invitation", () => openInvitation(invite));
-    review.dataset.handoverInvite = invite.id;
-    review.setAttribute("aria-label","Review invitation · " + invite.name);
+    const subject = entry.title ?? entry.subject ?? "Dispatch record";
+    const date = entry.created == null ? null : new Date(entry.created);
+    const time = Number.isFinite(date?.getTime())
+      ? date.toLocaleString(undefined, {month:"short", day:"numeric", hour:"numeric", minute:"2-digit"}) : "";
+    details.append(element("h4", subject),
+      element("p", [entry.sender,entry.location,time].filter(Boolean).join(" · "), "handover-meta"),
+      element("p", dispatchState(entry), "eyebrow handover-status"));
+    const review = button(entry.actionLabel ?? "Review", entry.review, index === 0);
+    review.dataset.handoverEntry = entry.id;
+    review.setAttribute("aria-label", "Review " + subject + (entry.location ? " · " + entry.location : ""));
     row.append(details,review);
     return row;
   }
@@ -171,18 +174,16 @@ export function createShiftHandover(target, {openScene, openReceipt, openInvitat
   function render() {
     if (!player || !visible) return;
     const rooms = handoverSceneRows(player, markers);
-    const invites = player.scene_invites ?? [];
-    const handlerChoices = player.handler_choices ?? [];
     const label = player.stage === "active"
       ? [player.callsign, player.profile?.status, player.profile?.frame_name ?? player.profile?.frame].filter(Boolean).join(" · ")
       : player.callsign || (player.stage === "handler" ? "Handler" : "");
-    const signature = JSON.stringify([player.mailbox, label, rooms, invites, handlerChoices]);
+    const signature = JSON.stringify([player.mailbox, label, rooms, assignments]);
     if (signature === rendered) return;
     rendered = signature;
     const focused = document.activeElement;
     const focusedRoom = focused?.closest("[data-handover-room]")?.dataset.handoverRoom;
     const focusedAction = focused?.dataset.handoverAction;
-    const focusedInvite = focused?.dataset.handoverInvite;
+    const focusedEntry = focused?.dataset.handoverEntry;
     pilot.textContent = label;
     pilot.hidden = !label;
     const count = rooms.reduce((sum,room) => sum + room.unread,0);
@@ -192,33 +193,17 @@ export function createShiftHandover(target, {openScene, openReceipt, openInvitat
     sceneList.replaceChildren(...(rooms.length ? rooms.map(rowFor) : [
       element("li", "Your joined scenes will appear here.", "handover-empty"),
     ]));
-    secondary.replaceChildren();
-    if (invites.length) {
-      const list = element("ul", undefined, "handover-rows");
-      list.append(...invites.map(invitationRow));
-      secondary.append(element("h3", invites.length === 1 ? "Scene invitation" : "Scene invitations"),list);
-    }
-    if (handlerChoices.length) {
-      const list = element("ul", undefined, "handover-rows");
-      for (const card of handlerChoices) {
-        const row = element("li", undefined, "handover-row");
-        const details = element("div", undefined, "handover-copy");
-        details.append(element("h4", playName(card.play)),
-          element("p", card.room_name || "Scene operations","handover-meta"));
-        row.append(details,button("Review " + decisionName(card.choice.kind),
-          () => openReceipt(card.room, card.root, card.choice.id),true));
-        list.append(row);
-      }
-      secondary.append(element("h3","Handler assignments"),list);
-    } else if (player.stage === "handler" && !rooms.length) {
-      secondary.append(element("p","No pending Handler assignments.","handover-empty"));
+    assigned.hidden = !assignments.length && (player.stage !== "handler" || rooms.length > 0);
+    assignedRows.replaceChildren(...assignments.map(assignmentRow));
+    if (!assigned.hidden && !assignments.length) {
+      assignedRows.append(element("li", "No pending Handler assignments.", "handover-empty"));
     }
     if (focusedRoom && focusedAction) {
       const row = [...sceneList.children].find(item => item.dataset.handoverRoom === focusedRoom);
       row?.querySelector(`[data-handover-action="${focusedAction}"]`)?.focus({preventScroll:true});
-    } else if (focusedInvite) {
-      [...secondary.querySelectorAll("[data-handover-invite]")]
-        .find(control => control.dataset.handoverInvite === focusedInvite)?.focus({preventScroll:true});
+    } else if (focusedEntry) {
+      (assignedRows.querySelector(`[data-handover-entry="${CSS.escape(focusedEntry)}"]`)
+        ?? assignedRows.querySelector("button") ?? sceneList.querySelector("button"))?.focus({preventScroll:true});
     }
   }
 
@@ -229,7 +214,7 @@ export function createShiftHandover(target, {openScene, openReceipt, openInvitat
         markers = mailbox ? loadMarkers(markerPrefix + mailbox) : new Map();
         rendered = undefined;
         sceneList.replaceChildren();
-        secondary.replaceChildren();
+        assignedRows.replaceChildren();
         pilot.textContent = "";
       }
       player = record;
@@ -238,6 +223,10 @@ export function createShiftHandover(target, {openScene, openReceipt, openInvitat
     setVisible(value) {
       visible = value;
       if (visible) render();
+    },
+    updateAssignments(next) {
+      assignments = next;
+      render();
     },
     markRead(roomId, entries, receipts = []) {
       if (!player?.directory?.rooms.some(room => room.id === roomId && room.joined && room.archived_at == null)) return;

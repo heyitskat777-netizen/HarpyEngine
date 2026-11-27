@@ -47,8 +47,8 @@
   <div class="tools">
     <button id="campaign-safety" data-campaign-safety type="button" aria-label="Campaign safety" aria-haspopup="dialog" hidden>Safety</button>
     <button id="handler-pilot-toggle" type="button" aria-pressed="false" hidden>Pilot mode</button>
-    <button id="assignments-toggle" type="button" aria-expanded="false" aria-controls="inbox" hidden>Assignments <span id="assignments-count" aria-live="polite"></span></button>
     <button id="inbox-toggle" type="button" aria-label="Inbox" aria-expanded="false" aria-controls="inbox"><span class="mail-mark" aria-hidden="true"></span><span class="tool-label">Inbox</span><span id="inbox-count" aria-live="polite"></span></button>
+    <button id="communications-toggle" type="button" aria-haspopup="dialog" aria-controls="communications-desk" hidden>Comms<span id="communications-unread" aria-hidden="true" hidden></span></button>
     <button id="theme-toggle" type="button" aria-label="Toggle light and dark mode"><span class="theme-mark" aria-hidden="true"></span><span id="theme-label">Dark mode</span></button>
   </div>
 </header>
@@ -108,7 +108,6 @@
       <div class="local-tools">
         <div class="rail-shortcuts">
           <button id="locations-toggle" class="workbench-action" type="button" aria-haspopup="dialog" aria-controls="mobile-locations" hidden>Locations</button>
-          <button id="communications-toggle" class="workbench-action" type="button" aria-haspopup="dialog" aria-controls="communications-desk" hidden>Comms</button>
         </div>
         <button id="refresh" class="workbench-action" type="button" aria-label="Synchronize terminal" hidden><span aria-hidden="true">↻</span> <span class="tool-label">Synchronize terminal</span></button>
         <button id="enrollment-trigger" class="workbench-action" type="button" aria-haspopup="dialog" hidden>Create pilot</button>
@@ -142,25 +141,27 @@
           <dl id="room-record" class="record-register" aria-label="Scene record"></dl>
           <div id="room-actions" class="actions scene-room-tools"></div>
         </header>
-        <div id="room-artwork"></div>
-        <section id="present-pilots" class="scene-personnel" aria-labelledby="present-pilots-title" hidden>
-          <h3 id="present-pilots-title">Present Pilots</h3>
-          <ul id="present-pilot-list" class="records"></ul>
-        </section>
-        <section id="scene-cast" class="scene-personnel" aria-labelledby="scene-cast-title" hidden>
-          <h3 id="scene-cast-title">Scene Cast</h3>
-          <ul id="scene-cast-list" class="records"></ul>
-        </section>
-        <p id="scene-intel-status" class="terminal-feedback" role="status"></p>
-        <div id="scene-assigned-controls" class="assigned-work actions"></div>
-        <div id="scene-composer-host"></div>
-        <section id="scene-play-panel" class="transcript" aria-labelledby="scene-play-title" hidden>
-          <h3 id="scene-play-title" tabindex="-1">Scene Plays</h3>
-          <p id="scene-play-feedback" role="status" hidden></p>
-          <div id="scene-play-options"></div>
-          <div id="enter-scene-controls"></div>
-        </section>
-        <section id="room-dialogue" class="transcript" aria-label="Scene dialogue" hidden></section>
+        <div class="scene-room-content">
+          <div class="scene-room-reference">
+            <div id="room-artwork"></div>
+            <section id="present-pilots" class="scene-personnel" aria-labelledby="present-pilots-title" hidden>
+              <h3 id="present-pilots-title">Present Pilots</h3>
+              <ul id="present-pilot-list" class="records"></ul>
+            </section>
+            <section id="scene-cast" class="scene-personnel" aria-labelledby="scene-cast-title" hidden>
+              <h3 id="scene-cast-title">Scene Cast</h3>
+              <ul id="scene-cast-list" class="records"></ul>
+            </section>
+          </div>
+          <div class="scene-room-work">
+            <p id="scene-intel-status" class="terminal-feedback" role="status"></p>
+            <p id="scene-direct-feedback" class="terminal-feedback" role="status" hidden></p>
+            <div id="scene-assigned-controls" class="assigned-work actions"></div>
+            <div id="scene-composer-host"></div>
+            <div id="scene-command-rail" role="group" aria-label="Scene Play commands" hidden></div>
+            <section id="room-dialogue" class="transcript" aria-label="Scene dialogue" hidden></section>
+          </div>
+        </div>
       </section>
       <section id="setup" aria-label="Character and scene"></section>
     </section>
@@ -184,7 +185,7 @@
       </div>
       <div id="tactical-panel" hidden>
         <div class="record-heading"><h3 id="tactical-title">Relay perimeter drill</h3><div class="actions" id="tactical-toolbar" aria-label="Battlefield commands"></div></div>
-        <dl id="tactical-turn-strip" class="record-register" aria-label="Battlefield record" aria-live="polite" hidden></dl>
+        <p id="tactical-turn-strip" class="tactical-turn-strip" aria-live="polite" hidden></p>
         <div id="tactical-grid" role="group" aria-label="Tactical board"></div>
         <ul id="tactical-map-key" class="map-key" aria-label="Tactical map legend" hidden>
           <li><span class="map-swatch terrain" data-tile="w" aria-hidden="true"></span>Walls</li>
@@ -258,7 +259,10 @@
   </div>
 </dialog>
 <dialog id="communication-dialog" class="activity-dialog terminal-dialog" aria-labelledby="communication-title">
-  <header class="record-heading"><h2 id="communication-title">Direct channel</h2><form method="dialog"><button aria-label="Close private communication">×</button></form></header>
+  <header class="record-heading">
+    <div class="communication-heading"><button id="communication-back" type="button" aria-label="Back to Comms" hidden>←</button><h2 id="communication-title">Direct channel</h2></div>
+    <form method="dialog"><button aria-label="Close private communication">×</button></form>
+  </header>
   <div class="terminal-panel">
     <div class="terminal-line"><span>Foundation / Communications</span></div>
     <div id="communication-participants" class="communication-participants" aria-label="Transmission participants"></div>
@@ -402,6 +406,15 @@
   <div class="terminal-panel">
     <div class="terminal-line"><span>Foundation / Scene operations</span><span id="profile-play-state" class="terminal-state" aria-live="polite"></span></div>
     <div id="profile-play-context"></div>
+  </div>
+</dialog>
+<dialog id="scene-play-panel" class="activity-dialog terminal-dialog" aria-labelledby="scene-play-title">
+  <header class="record-heading"><h2 id="scene-play-title" tabindex="-1">Scene Plays</h2><form method="dialog"><button aria-label="Close Scene Plays">×</button></form></header>
+  <div class="terminal-panel">
+    <div class="terminal-line"><span id="scene-play-location"></span><span class="terminal-state">SCENE PLAYS</span></div>
+    <p id="scene-play-feedback" role="status" hidden></p>
+    <div id="scene-play-options"></div>
+    <div id="enter-scene-controls"></div>
   </div>
 </dialog>
 <dialog id="scene-action-dialog" class="activity-dialog terminal-dialog" aria-labelledby="scene-action-title">
@@ -596,7 +609,9 @@ document.getElementById("character-files").addEventListener("click", async event
     trigger.disabled = false;
   }
 });
-const readBattlefield = async () => responseData(await activityFetch("/api/battlefield"));
+const readBattlefield = async (destinations = false) => responseData(await activityFetch(
+  "/api/battlefield" + (destinations ? "?destinations=1" : "")
+));
 const tactical = tacticalUI(
   readBattlefield,
   async (action, body, key) => responseData(await activityFetch("/api/battlefield/" + action, {
@@ -644,11 +659,9 @@ document.getElementById("scene-action-refresh").addEventListener("click", () => 
   });
 });
 const inboxToggle = document.getElementById("inbox-toggle");
-const assignmentsToggle = document.getElementById("assignments-toggle");
 const historyDispatches = inbox.querySelector('[data-dispatch-folder="history"]');
 const spool = mailSpool(inbox, document.getElementById("mail-entries"),
-  document.getElementById("mail-reader"), document.getElementById("inbox-count"),
-  document.getElementById("assignments-count"), entry => {
+  document.getElementById("mail-reader"), document.getElementById("inbox-count"), entry => {
     const art = entry.portrait ?? currentPlayer?.cadre?.find(pilot => pilot.callsign === entry.sender)?.artwork;
     if (!art) return;
     const portrait = document.createElement("span");
@@ -656,20 +669,19 @@ const spool = mailSpool(inbox, document.getElementById("mail-entries"),
     portrait.setAttribute("aria-hidden", "true");
     artwork.picture(portrait, art, {decorative:true, fallback:Array.from(entry.sender ?? "").slice(0,2).join("")});
     return portrait;
-  });
+  }, ui.updateHandoverAssignments);
 for (const folder of inbox.querySelectorAll("[data-dispatch-folder]")) {
   folder.addEventListener("click", updateDmDeliveryVisibility);
 }
-function openInbox(open, assigned = false) {
+function openInbox(open) {
   if (!open && document.getElementById("mail-reader").open) document.getElementById("mail-reader").close();
   inbox.hidden = !open;
-  inboxToggle.setAttribute("aria-expanded", String(open && !assigned));
-  assignmentsToggle.setAttribute("aria-expanded", String(open && assigned));
+  inboxToggle.setAttribute("aria-expanded", String(open));
   if (open) {
     sizeInbox();
     inboxLayout.observe(activityHeader);
     window.addEventListener("scroll", sizeInbox, {passive:true});
-    spool.opened(assigned);
+    spool.opened();
     refreshSpecialistMail().catch(() => {});
   } else {
     inboxLayout.disconnect();
@@ -983,6 +995,7 @@ const communications = communicationsUI(
     })));
   },
   artwork,
+  refreshDmDelivery,
 );
 
 function requestPlayCancellation(source, room) {
@@ -1001,16 +1014,9 @@ inboxToggle.addEventListener("click", () => {
     status.textContent = "Synchronize terminal to refresh Inbox mail.";
   });
 });
-assignmentsToggle.addEventListener("click", () => {
-  openInbox(inbox.hidden || assignmentsToggle.getAttribute("aria-expanded") !== "true", true);
-  if (!inbox.hidden && session) Promise.all([refreshScene(), refreshFacilitatorReviews()]).catch(() => {
-    status.textContent = "Synchronize terminal to retrieve assignments.";
-  });
-});
 document.getElementById("close-inbox").addEventListener("click", () => {
-  const opener = assignmentsToggle.getAttribute("aria-expanded") === "true" ? assignmentsToggle : inboxToggle;
   openInbox(false);
-  opener.focus();
+  inboxToggle.focus();
 });
 
 const themeToggle = document.getElementById("theme-toggle");
@@ -1100,7 +1106,8 @@ async function refreshDmDelivery() {
   clearTimeout(dmDeliveryPoll);
   const request = ++dmDeliveryRequest;
   const mailbox = currentPlayer?.mailbox;
-  const active = () => !inbox.hidden && request === dmDeliveryRequest && currentPlayer?.mailbox === mailbox;
+  const active = () => (!inbox.hidden || communications.reading()) &&
+    request === dmDeliveryRequest && currentPlayer?.mailbox === mailbox;
   updateDmDeliveryVisibility();
   if (!mailbox || !session || !rosterEnabled || !active()) {
     dmDelivery.hidden = true;
@@ -1109,8 +1116,10 @@ async function refreshDmDelivery() {
   try {
     const {deliveries} = await responseData(await activityFetch("/api/dm-receipts?view=delivery"));
     if (!active()) return;
+    communications.setDeliveries(deliveries.filter(receipt => receipt.kind === "communication"));
     const matched = new Map();
     const otherReceipts = deliveries.flatMap(receipt => {
+      if (receipt.kind === "communication") return [];
       const key = receipt.kind + ":" + receipt.record;
       const confirmed = new Set();
       const recipients = receipt.recipients.filter(row => {
@@ -1186,7 +1195,7 @@ async function saveSetup(step, payload) {
     : punishment ? document.getElementById("punishment-work")
     : enrolling && enrollmentDialog.open ? enrollmentDialog : setup;
   const playFeedback = document.getElementById(sceneDialog.open
-    ? "scene-action-feedback" : "scene-play-feedback");
+    ? "scene-action-feedback" : scenePlayOptions.closest("dialog").open ? "scene-play-feedback" : "scene-direct-feedback");
   if (playCommand) {
     playFeedback.textContent = "Saving…";
     playFeedback.hidden = false;
@@ -1396,7 +1405,6 @@ async function refreshScene() {
   const player = await responseData(response);
   if (stale()) return null;
   sceneRefreshApplied = request;
-  assignmentsToggle.hidden = false;
   perspectiveToggle.hidden = !player.handler_account;
   perspectiveToggle.setAttribute("aria-pressed",String(player.perspective === "pilot"));
   perspectiveToggle.textContent = player.perspective === "pilot" ? "Return to Handler desk" : "Pilot mode";
@@ -1476,7 +1484,7 @@ async function refreshScene() {
   pilot.dataset.ready = "";
   spool.replace("bonds", [...player.bonds, ...(player.bond_history ?? [])].map(bond => ({
     id:`bond:${bond.id}:${bond.revision}`, file:"bond:" + bond.id,
-    title:"Starting Bond",
+    title:"Starting Bond", actionLabel:"Review Bond",
     sender:bond.incoming ? bond.counterpart ?? "Personnel intake" : player.callsign || "You",
     recipient:bond.incoming ? undefined : bond.counterpart,
     deliveryKey:bond.incoming ? undefined : "bond:" + bond.id,
@@ -1486,7 +1494,7 @@ async function refreshScene() {
   })));
   spool.replace("scene-invites", (player.scene_invites ?? []).map(record => ({
     id:"scene-invite:" + record.id, sender:"Scene operations", title:"Scene invitation",
-    location:record.name, required:true,
+    location:record.name, required:true, actionLabel:"Review invitation",
     open() { openInbox(false); ui.openSceneInvitation(record); },
   })));
   const choices = player.creation_choices;
@@ -1538,6 +1546,7 @@ async function refreshScene() {
     const letter = (choice, id, subject, received) => ({
       id, sender:"HARPYENGINE", location:originalRoom?.name,
       subject, required:Boolean(choice), status:received, created:receipt.created,
+      actionLabel:choice ? "Review Play" : undefined,
       owner:choice?.owner === "handler" ? "Handler" : undefined,
       owned:choice?.owner !== "handler",
       open() { openInbox(false); ui.openSceneReceipt(receipt.room, receipt.id, choice?.id); },
@@ -1545,16 +1554,16 @@ async function refreshScene() {
     if (receipt.pending.length) return receipt.pending.map(choice => letter(choice,
       `choice:${choice.id}:${choice.revision}`, `${label} · ${decisionName(choice.kind)}`));
     if (receipt.waiting_on?.length) return [{
-      ...letter(null, "waiting:" + receipt.id, label, "Awaiting " + receipt.waiting_on.join(", ")), waiting:true,
+      ...letter(null, "waiting:" + receipt.id, label), waiting:true, owner:receipt.waiting_on.join(", "),
     }];
     if (["complete", "aborted"].includes(receipt.state)) return [letter(null, "receipt:" + receipt.id,
       label + " · Receipt", receipt.state === "aborted" ? "Cancelled" : receipt.archived_at != null ? "Archived" : "Filed")];
     return [];
   });
   spool.replace("scene", [...sceneMail, ...(player.handler_choices ?? []).map(card => ({
-    id:`choice:${card.choice.id}:${card.choice.revision}`, sender:"Scene operations", location:card.room_name,
-    subject:`${playName(card.play)} · ${decisionName(card.choice.kind)}`, required:true,
-    open() { openInbox(false); focusDecision(document.getElementById("handler-choices"), card.choice.id); },
+    id:`choice:${card.choice.id}:${card.choice.revision}`, sender:"HarpyEngine", location:card.room_name,
+    subject:`${playName(card.play)} · ${decisionName(card.choice.kind)}`, required:true, actionLabel:"Review ruling",
+    open() { openInbox(false); ui.openSceneReceipt(card.room, card.root, card.choice.id); },
   }))]);
   const sceneWork = player.scene_beneath_work ?? [];
   const specialty = new Map(sceneWork.filter(card => card.specialty).map(card => [card.id,card]));
@@ -1689,7 +1698,14 @@ async function refreshPresence() {
 document.addEventListener("visibilitychange", refreshPresence);
 setInterval(refreshPresence, 30000);
 
-function renderRoomPlays(scene) {
+function renderRoomPlays(scene, toolbar) {
+  if (scene?.safety) {
+    const {own, revision} = scene.safety;
+    const safety = reviewElement("button", own ? "Clear my safety pause" : "Safety pause");
+    safety.type = "button";
+    safety.addEventListener("click", () => saveSetup("scene-safety", {room:scene.id,pause:!own,revision}));
+    toolbar.append(safety);
+  }
   const playView = JSON.stringify(scene);
   if (playView === displayedScenePlays) return;
   renderScenePlays(scenePlayOptions, scene, (step, payload) => saveSetup(step, {...payload, room:scene.id}),
@@ -2101,7 +2117,7 @@ function renderOffers(data) {
   }
   spool.replace("missions", data.offers.map(offer => ({
     id:`mission:${offer.id}:${offer.revision}`, file:"mission:" + offer.id, sender:"Dispatch desk",
-    title:"Mission dispatch", required:offer.needs_response,
+    title:"Mission dispatch", required:offer.needs_response, actionLabel:"Review offer",
     waiting:offer.waiting_on === "invitees" && !offer.response,
     created:offer.filed_at, timeStyle:"medium",
     status:offer.response === "decline" ? "Declined" : offer.response === "accept" ? "Accepted" : missionStatus(offer),
@@ -2309,7 +2325,7 @@ async function start() {
     if (config.director_scene) mountDirectorDesk(workbench, config.director_scene, activityFetch, config.activity_shadow);
     if (config.campaign_setup) {
       const pane = document.getElementById("campaign-setup-panels");
-      const showSetup = mountDirectorDesk(pane, null, activityFetch);
+      const showSetup = mountDirectorDesk(pane, null, activityFetch, false, false, false, undefined, artwork.picture);
       let review;
       if (campaignSwitcher) {
         const openReview = config.reviewed_ai_trial ? () => review.open() : null;
@@ -2317,8 +2333,8 @@ async function start() {
       }
       if (config.reviewed_ai_trial) review = mountActivityAITrial(pane, activityFetch, openApprovedNativePlay);
       const refreshStartFresh = campaignSwitcher ? mountStartFresh(pane, activityFetch, switchCampaign) : null;
-      document.getElementById("campaign-setup-links").addEventListener("click", event => {
-        const link = event.target.closest("a");
+      pane.closest('[data-pane="campaign-setup"]').addEventListener("click", event => {
+        const link = event.target.closest("#campaign-setup-links a, .campaign-setup-next");
         if (!link) return;
         const section = document.getElementById(link.hash.slice(1));
         if (!section) return;
