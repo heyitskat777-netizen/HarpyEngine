@@ -577,8 +577,7 @@ export function openSheetPortrayal({activityFetch, scene, kind, actorToken}) {
 
   async function load(openPreview = false) {
     const view = await request("portrayal-sheets");
-    const kinds = kind === "pilot" ? ["pilot", "npc"]
-      : kind === "alternate" ? ["npc", "gorgon", "external_pilot"] : [kind];
+    const kinds = kind === "alternate" ? ["npc", "gorgon", "external_pilot"] : ["handler"];
     const sheets = view.sheets.filter(sheet => kinds.includes(sheet.actor.kind));
     const sheet = sheets.find(sheet => sheet.token === token) ?? sheets.find(x => x.actor.kind === kind) ?? sheets[0];
     body.replaceChildren();
@@ -1211,9 +1210,9 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
         if (savedArchetype && !archetypes.includes(savedArchetype)) archetypes.push(savedArchetype);
         const [archetypeLabel, archetype] = choiceField("AI Pilot archetype",
           archetypes.map(name => [name, name]), savedArchetype);
-        const [girlLabel, girl] = choiceField("Girl playbook for portrayal",
+        const [girlLabel, girl] = choiceField("Girl playbook",
           Object.entries(generator.girl_types ?? {}), saved?.portrayal?.girl_playbook);
-        const [frameLabel, frame] = choiceField("Frame for portrayal",
+        const [frameLabel, frame] = choiceField("Frame playbook",
           Object.entries(generator.frame_types ?? {}), saved?.portrayal?.frame_playbook);
         archetype.setAttribute("aria-label", "AI Pilot archetype");
         editor.append(girlLabel, frameLabel, archetypeLabel);
@@ -1307,11 +1306,18 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
         sessionZeroSave(composer, "Post roleplay", "session-zero-post", () => ({
           anchor: state.opening_anchor, text: text.value,
         }));
-      if (state.can_advance_introduction) intro.append(button("Advance one introductory day", async key => {
-          await write("session-zero-advance", {anchor: state.opening_anchor}, key);
-          await refresh();
-        }));
       }
+      if (state.can_advance_introduction) intro.append(button("Advance one introductory day", async key => {
+        await write("session-zero-advance", {anchor: state.opening_anchor}, key);
+        await refresh();
+      }));
+      if (state.first_briefing?.offered) {
+        intro.append(element("p", "First mission offered."));
+        if (state.first_briefing.ai_on && state.first_briefing.paired_ai_ready) {
+          intro.append(element("p", "AI GM and Handler enabled. Scene consent and review still apply."));
+        }
+      }
+      if (state.first_briefing?.ready) renderFirstMissionBriefing(intro, state);
     }
     if (state.can_generate) row.append(button("View group worksheet", async () => {
       const result = await read("session-zero-worksheet");
@@ -1968,7 +1974,10 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
     if (!pending.length && (!options.pilots.length || !options.actors.length)) return;
     const row = card(body, "AI Pilot dossiers");
     if (options.pilots.length && options.actors.length) {
-      const form = timeForm(row, "Attach a planned Pilot");
+      const form = element("section");
+      form.append(element("h5", "Attach a planned Pilot"));
+      row.append(form);
+      if (liveTrial) form.append(element("p", "The Handler drafts a portrayal for the controller to review."));
       const [pilotLabel, pilot] = choiceField("Approved AI Pilot", []);
       const [actorLabel, actor] = choiceField("Your character in this scene",
         options.actors.map(item => [item.actor.entity, item.label]));
@@ -1981,11 +1990,22 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
       }
       actor.addEventListener("change", filter);
       form.append(actorLabel, pilotLabel);
-      sessionZeroSave(form, "Prepare dossier for review", "pilot-dossier-propose", () => ({
+      const values = () => ({
         actor: selected()?.actor,
         version: selected()?.version ?? 0,
         origin: {plan: options.plan, callsign: pilot.value},
-      }));
+      });
+      const prepare = button("Prepare dossier for review", async key => {
+        if (!actor.reportValidity() || !pilot.reportValidity()) return;
+        status.textContent = "Preparing personnel dossier…";
+        const receipt = await write("pilot-dossier-propose", values(), key);
+        await refresh();
+        status.textContent = receipt.portrayal_status === "preparing"
+          ? "Dossier preparation is in progress. Refresh Director work to check its status."
+          : "Dossier ready for controller review.";
+      }, () => JSON.stringify(values()));
+      prepare.classList.add("primary");
+      form.append(prepare);
     }
     for (const item of pending) {
       const panel = card(row, "Pilot dossier review");
@@ -1993,27 +2013,22 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
         panel.append(element("p", "The actor or scene changed. Prepare a fresh dossier."));
         continue;
       }
-      panel.append(button("Review Pilot dossier", async () => {
+      panel.append(alternatePopup("Review Pilot dossier", async (file, save) => {
         const review = await read("dossier-review/" + routeId(item.id));
         const profile = review.profile;
-        const fields = [["Background", profile.background], ["Voice", profile.voice],
+        const traits = profile.pilot_portrayal;
+        const fields = [
+          ["Girl / Frame", [traits?.girl_playbook, traits?.frame_playbook].filter(Boolean).join(" / ")],
+          ["Background", profile.background], ["Voice", profile.voice],
           ["Behavior", profile.behavior], ["Under pressure", profile.reaction_tendencies.join(" · ")],
           ["Values", profile.values.join(" · ")], ["Fears", profile.fears.join(" · ")],
-          ["Contradictions", profile.contradictions.join(" · ")]];
-        panel.replaceChildren(element("h4", review.pilot_origin.callsign));
-        for (const [label, value] of fields) if (value) panel.append(element("p", label + " · " + value));
-        panel.append(button("Confirm Pilot dossier", async key => {
-          await write("dossier-confirm", {id: item.id}, key);
-          await refresh();
-        }));
+          ["Contradictions", profile.contradictions.join(" · ")], ["When they step in", traits?.initiative],
+        ];
+        file.append(element("h3", review.pilot_origin.callsign),
+          element("p", review.portrayal_source === "handler" ? "Handler draft" : "Approved plan draft"));
+        for (const [label, value] of fields) if (value) file.append(element("p", label + " · " + value));
+        save("Confirm Pilot dossier", "dossier-confirm", () => ({id: item.id}), () => true);
       }));
-      if (state.first_briefing?.offered) {
-        intro.append(element("p", "First mission offered."));
-        if (state.first_briefing.ai_on && state.first_briefing.paired_ai_ready) {
-          intro.append(element("p", "AI GM and Handler enabled. Scene consent and review still apply."));
-        }
-      }
-      if (state.first_briefing?.ready) renderFirstMissionBriefing(intro, state);
     }
   }
 
@@ -2734,7 +2749,7 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
   }
 
   function alternatePopup(name, form) {
-    return button(name, () => {
+    const trigger = button(name, async () => {
       const dialog = element("dialog");
       dialog.className = "activity-dialog terminal-dialog";
       dialog.setAttribute("aria-label", name);
@@ -2759,10 +2774,12 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
           }
         }, () => JSON.stringify(values())));
       };
-      form(row, save);
+      await form(row, save);
       document.body.append(dialog);
       dialog.showModal();
     });
+    trigger.setAttribute("aria-haspopup", "dialog");
+    return trigger;
   }
 
   function renderAlternateInquiries(inquiries) {

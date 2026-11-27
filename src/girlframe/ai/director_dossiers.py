@@ -202,6 +202,25 @@ class CharacterSetup(Contract):
     gorgon_speech: bool = Field(default=False, exclude_if=lambda value: not value)
 
 
+PortrayalLine = Annotated[
+    str, StringConstraints(strip_whitespace=True, min_length=1, max_length=200)
+]
+
+
+class AIPilotPortrayalDraft(Contract):
+    """Narrative guidance only. The approved plan supplies the fixed archetypes."""
+
+    voice: PortrayalLine
+    approach: PortrayalLine
+    pressure: PortrayalLine
+    repair: PortrayalLine
+    value: PortrayalLine
+    fear: PortrayalLine
+    contradiction: PortrayalLine
+    goal: PortrayalLine
+    initiative: PortrayalLine
+
+
 class DossierProfile(Contract):
     presence: Literal["background", "recurring"] = "background"
     background: str = Field(default="", max_length=2000)
@@ -293,6 +312,9 @@ class DossierProposal(Contract):
     binding: str
     application: Literal["controller_review_only"] = "controller_review_only"
     pilot_origin: PilotDossierOrigin | None = Field(default=None, exclude_if=lambda x: x is None)
+    portrayal_source: Literal["handler", "approved_plan"] | None = Field(
+        default=None, exclude_if=lambda x: x is None
+    )
 
 
 class DossierRecord(Contract):

@@ -77,7 +77,9 @@ class SessionZeroDesk:
                 if key in state["opening"]:
                     state["opening"][key] = str(state["opening"][key])
         state.update(viewer=str(viewer.user_id), playbooks=PLAYBOOKS, limit=MAX_GROUP)
-        if state["handler_ready"] == state["viewer"] and state.get("opening") is None:
+        if state.get("opening") is None and (
+            state["handler_ready"] == state["viewer"] or state.get("can_edit_plan")
+        ):
             state["pilot_generator"] = {
                 "callsigns": PILOT_CALLSIGNS,
                 "portrayals": tuple(item.model_dump(mode="json") for item in PILOT_PORTRAYALS),

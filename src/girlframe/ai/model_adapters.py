@@ -18,11 +18,14 @@ from girlframe.ai.conversation import (
     HandlerNeedProposal,
     HandlerRequest,
 )
+from girlframe.ai.director_dossiers import AIPilotPortrayalDraft
 from girlframe.ai.director_planning import DirectorPlanningDecision, DirectorPlanningPacket
 from girlframe.ai.director_reactions import ReactionProposal
 from girlframe.ai.gm_outcomes import OutcomePacket, OutcomeProposal
 from girlframe.ai.model_transport import OpenAIResponses
+from girlframe.ai.pilot_initiative import pilot_lenses
 from girlframe.ai.worldbuilding import WorldbuildingPacket, WorldbuildingProposal
+from girlframe.engine.campaign_opening import PlannedAIPilot
 from girlframe.engine.m3_handler_character import PlaybookProfile
 from girlframe.engine.m3_handler_play_state import Play
 from girlframe.engine.m3_handler_state import PERSONALITIES, HandlerNotes, Playbook
@@ -206,6 +209,22 @@ class ModelHandler:
 class ModelActivityBatch:
     def __init__(self, client: OpenAIResponses):
         self.client = client
+
+    def draft_pilot_portrayal(self, pilot: PlannedAIPilot) -> AIPilotPortrayalDraft:
+        return self.client.generate(
+            "Write private portrayal guidance for the approved AI Girl. Use one short, concrete "
+            "sentence per field. Keep specific personality details and commitments from the seed. "
+            "Use the Girl playbook to shape what she cares about and the Frame to shape what "
+            "she notices and tries. Give her a distinct speaking rhythm, personal goal, and "
+            "contradiction. Show observable habits and name what makes her speak up or wait. "
+            "Leave rule outcomes, assets, rank, Bonds, and the actions of other characters "
+            "to HarpyEngine and their controllers. Write possibilities, not past campaign events.",
+            {
+                "pilot": pilot.model_dump(mode="json"),
+                "playbook_guidance": pilot_lenses(pilot.portrayal).model_dump(mode="json"),
+            },
+            AIPilotPortrayalDraft,
+        )
 
     def decide(self, packet: ActivityBatchPacket) -> ActivityBatchDecision:
         return self.client.generate(

@@ -1,6 +1,7 @@
 """Append-only actor dossiers; actual controllers alone confirm their self portrayal."""
 
 import json
+from collections.abc import Callable
 from typing import Any
 from uuid import uuid4
 
@@ -9,6 +10,7 @@ from sqlalchemy import Connection
 
 from girlframe.ai.director import DirectorContext, KnowledgeReference
 from girlframe.ai.director_dossiers import (
+    AIPilotPortrayalDraft,
     CharacterSetup,
     DossierContinuity,
     DossierContinuityEdit,
@@ -26,6 +28,7 @@ from girlframe.ai.director_dossiers import (
     RelationshipTerm,
     StartingRelationship,
 )
+from girlframe.ai.model_transport import ModelUnavailable
 from girlframe.database import tables as t
 from girlframe.engine.campaign_opening import PlannedAIPilot
 from girlframe.engine.m2 import GameState
@@ -45,6 +48,8 @@ from girlframe.services.m3_actors import ActorService, profiles
 from girlframe.services.m3_missions import MissionService
 from girlframe.services.onboarding import WorkflowError
 from girlframe.services.read_only_bot import GuildViewer
+
+PORTRAYAL_DRAFT_TIMEOUT = 120
 
 
 class DirectorDossierService:
@@ -466,7 +471,7 @@ class DirectorDossierService:
             }
         )
 
-    def _proposal(self, c: Connection, scene: str, identity: str) -> DossierProposal:
+    def _draft_body(self, c: Connection, scene: str, identity: str) -> dict[str, Any] | None:
         table = t.director_context["shadow"]
         raw = c.scalar(
             sa.select(table.c.body_json).where(
@@ -475,7 +480,10 @@ class DirectorDossierService:
                 table.c.id == identity,
             )
         )
-        body = json.loads(raw) if raw else None
+        return dict(json.loads(raw)) if raw else None
+
+    def _proposal(self, c: Connection, scene: str, identity: str) -> DossierProposal:
+        body = self._draft_body(c, scene, identity)
         if not body or body.get("record_type") != "dossier_proposal":
             raise WorkflowError("DOSSIER_PROPOSAL_UNAVAILABLE: reopen the actual dossier proposal.")
         return DossierProposal.model_validate_json(json.dumps(body["proposal"]))
@@ -618,8 +626,11 @@ class DirectorDossierService:
         actor: ActorRef,
         origin: PilotDossierOrigin,
         version: int = 0,
+        *,
+        generate: Callable[[PlannedAIPilot], AIPilotPortrayalDraft] | None = None,
     ) -> dict[str, Any]:
-        return self.propose(
+        claim = str(uuid4()) if generate is not None else None
+        receipt = self.propose(
             viewer,
             key,
             scene,
@@ -628,7 +639,96 @@ class DirectorDossierService:
             DossierProfile(),
             DossierState(),
             pilot_origin=origin,
+            portrayal_claim=claim,
         )
+        if generate is not None and claim is not None:
+            status = self._draft_pilot_portrayal(
+                viewer, scene, receipt["id"], origin, claim, generate
+            )
+            return receipt | {"portrayal_status": status}
+        return receipt
+
+    def _draft_pilot_portrayal(
+        self,
+        viewer: GuildViewer,
+        scene: str,
+        identity: str,
+        origin: PilotDossierOrigin,
+        claim: str,
+        generate: Callable[[PlannedAIPilot], AIPilotPortrayalDraft],
+    ) -> str:
+        def load(c: Connection) -> dict[str, Any]:
+            self._scope(c, viewer, scene)
+            self.game.scene_unpaused(c, scene)
+            return (
+                self._draft_body(c, scene, identity)
+                or self._draft_body(c, scene, identity + ":claim")
+                or {}
+            )
+
+        def validate(c: Connection, body: dict[str, Any]) -> tuple[DossierProposal, PlannedAIPilot]:
+            proposal = DossierProposal.model_validate_json(json.dumps(body["proposal"]))
+            actual = self._actor(c, scene, proposal.actor)
+            pilot = self._approved_pilot(c, viewer, actual, origin)
+            if proposal.pilot_origin != origin or proposal.binding != self._binding(
+                c, scene, proposal.actor
+            ):
+                raise WorkflowError("STALE_DOSSIER: prepare a new draft with the current actor.")
+            return proposal, pilot
+
+        with self.store.engine.connect() as c:
+            c.exec_driver_sql("BEGIN")
+            body = load(c)
+            if body.get("record_type") != "pilot_portrayal_claim":
+                source = body.get("proposal", {}).get("portrayal_source")
+                return "handler" if source == "handler" else "approved_plan"
+            _, pilot = validate(c, body)
+            owns_claim = body["claim"] == claim
+            if not owns_claim and self.store.clock() < body["expires"]:
+                return "preparing"
+
+        generated = None
+        if owns_claim:
+            try:
+                generated = generate(pilot)
+            except ModelUnavailable:
+                # Keep the approved seed usable if the model cannot draft it.
+                pass
+        with self.store.transaction() as c:
+            body = load(c)
+            if body.get("record_type") == "dossier_proposal":
+                source = body["proposal"]["portrayal_source"]
+                return "handler" if source == "handler" else "approved_plan"
+            proposal, pilot = validate(c, body)
+            source = "approved_plan"
+            if generated is not None and pilot.portrayal is not None:
+                traits = pilot.portrayal.model_copy(update=generated.model_dump())
+                profile = self._pilot_profile(pilot.model_copy(update={"portrayal": traits}))
+                profile = profile.model_copy(
+                    update={
+                        "character_setup": proposal.profile.character_setup,
+                        "limits": proposal.profile.limits,
+                    }
+                )
+                proposal = proposal.model_copy(update={"profile": profile})
+                source = "handler"
+            table = t.director_context["shadow"]
+            c.execute(
+                table.insert()
+                .values(
+                    campaign_id=self.store.campaign_id,
+                    scene_id=scene,
+                    id=identity,
+                    body_json=json.dumps(
+                        {
+                            "record_type": "dossier_proposal",
+                            "proposal": proposal.model_dump(mode="json")
+                            | {"portrayal_source": source},
+                        }
+                    )
+                )
+            )
+        return source
 
     @staticmethod
     def _pilot_profile(pilot: PlannedAIPilot) -> DossierProfile:
@@ -677,6 +777,7 @@ class DirectorDossierService:
         personnel: Personnel | None = None,
         *,
         pilot_origin: PilotDossierOrigin | None = None,
+        portrayal_claim: str | None = None,
     ) -> dict[str, Any]:
         def operation(c: Connection) -> dict[str, Any]:
             actual = self._actor(c, scene, actor)
@@ -691,8 +792,27 @@ class DirectorDossierService:
             portrayal = profile
             proposed_state = state
             projected_personnel = personnel or Personnel()
+            binding = self._binding(c, scene, actor)
+            identity = "dossier-proposal:" + str(uuid4())
+            record_id = identity
+            draft: dict[str, Any] = {"record_type": "dossier_proposal"}
             if pilot_origin is not None:
                 approved = self._approved_pilot(c, viewer, actual, pilot_origin)
+                seed = approved.portrayal
+                if portrayal_claim and seed and seed.girl_playbook and seed.frame_playbook:
+                    self.game.scene_unpaused(c, scene)
+                    identity = "dossier-proposal:" + _digest(
+                        (scene, binding, pilot_origin.model_dump(mode="json"))
+                    )
+                    # A reservation is append-only and cannot be reviewed as a dossier.
+                    record_id = identity + ":claim"
+                    if self._draft_body(c, scene, record_id):
+                        return {"id": identity, "application": "controller_review_only"}
+                    draft = {
+                        "record_type": "pilot_portrayal_claim",
+                        "claim": portrayal_claim,
+                        "expires": self.store.clock() + PORTRAYAL_DRAFT_TIMEOUT,
+                    }
                 generated = self._pilot_profile(approved)
                 if previous:
                     portrayal = previous.profile.model_copy(
@@ -717,7 +837,7 @@ class DirectorDossierService:
             proposed_state = proposed_state.model_copy(update={"continuity": continuity})
             self._validate_state(c, scene, actor, proposed_state)
             proposal = DossierProposal(
-                id="dossier-proposal:" + str(uuid4()),
+                id=identity,
                 scene_id=scene,
                 actor=actor,
                 controller=actual.controller,
@@ -726,7 +846,7 @@ class DirectorDossierService:
                 profile=portrayal,
                 state=proposed_state,
                 personnel=projected_personnel,
-                binding=self._binding(c, scene, actor),
+                binding=binding,
                 pilot_origin=pilot_origin,
             )
             c.execute(
@@ -735,12 +855,9 @@ class DirectorDossierService:
                 .values(
                     campaign_id=self.store.campaign_id,
                     scene_id=scene,
-                    id=proposal.id,
+                    id=record_id,
                     body_json=json.dumps(
-                        {
-                            "record_type": "dossier_proposal",
-                            "proposal": proposal.model_dump(mode="json"),
-                        }
+                        draft | {"proposal": proposal.model_dump(mode="json")}
                     ),
                 )
             )

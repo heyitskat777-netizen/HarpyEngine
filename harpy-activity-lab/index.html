@@ -2319,9 +2319,8 @@ async function start() {
     ));
   }
   if (config.director_scene || config.campaign_setup) {
-    const {mountDirectorDesk, mountActivityAISetup, mountActivityAITrial, mountStartFresh, openSheetPortrayal} = await import("/p2-desk.js");
+    const {mountDirectorDesk, mountActivityAISetup, mountActivityAITrial, mountStartFresh} = await import("/p2-desk.js");
     const workbench = document.querySelector(".workbench");
-    ui.setPortrayal(() => openSheetPortrayal({activityFetch, scene:config.director_scene, kind:"pilot"}));
     if (config.director_scene) mountDirectorDesk(workbench, config.director_scene, activityFetch, config.activity_shadow);
     if (config.campaign_setup) {
       const pane = document.getElementById("campaign-setup-panels");

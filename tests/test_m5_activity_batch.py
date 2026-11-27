@@ -8,6 +8,7 @@ from uuid import uuid4
 import pytest
 from test_activity_shadow_readiness import consent, publish_opening, records, review, submission
 from test_director_activity_scene import P2Scene, activity_adapter
+from test_director_continuity import roles
 from test_director_worldbuilding import detail
 from test_ledger import ADMIN, OTHER, PLAYER
 from test_ledger import ledger as ledger
@@ -17,9 +18,12 @@ from test_session_zero import FACILITATOR, OUTSIDE
 from girlframe.ai.conversation import HandlerNeedProposal
 from girlframe.ai.model_adapters import ModelActivityBatch
 from girlframe.ai.model_transport import ModelLimits, OpenAIResponses
+from girlframe.engine.campaign_opening import CampaignSeats, PlannedAIPilot
 from girlframe.engine.m2 import PlayInput
 from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_world_state import Faction
+from girlframe.engine.pilot_portrayal import PILOT_PORTRAYALS
+from girlframe.services.campaign_difficulty import EVENT, opening
 from girlframe.services.director_time import scene_time
 from girlframe.services.onboarding import WorkflowError
 
@@ -211,6 +215,10 @@ def test_relay_batch_rehearsal(relay):
     assert not relay.calls
     draft = relay.run_batch(1)
     assert len(relay.calls) == 1 and relay.calls[0]["trigger"] == "quiet"
+    _, pilot = roles(relay.app.session.observer, relay.scene)
+    assert relay.app.session.dossiers.role_packet(PLAYER, relay.scene, pilot).profile is None
+    listeners = {listener["label"] for listener in relay.calls[0]["eligible_listeners"]}
+    assert listeners == {"SYNTH", "SYNTH_A"}
     assert draft["status"] == "draft" and draft["reason"] == "shared_report"
     assert relay.canon_and_time() == start
     review_view = relay.app.read(ADMIN, relay.scene, "handler-draft", draft["draft_id"])
@@ -442,6 +450,148 @@ def test_named_handler_request_keeps_its_source_and_audience_in_a_batch(relay):
     assert heard["text"] == "Lark, leave the door shut. Use the marked shelf outside."
     assert relay.session.conversation.delivery.contributions(OTHER, relay.scene) == []
     assert relay.canon_and_time() == initial
+
+
+@pytest.mark.parametrize("relay", ["reviewed"], indirect=True)
+@pytest.mark.parametrize("result", ["generated", "invalid", "interrupted", "revoked"])
+def test_handler_drafts_only_an_approved_ai_pilot_portrayal(relay, result):
+    scene = relay.scene
+    _, pilot = roles(relay.app.session.observer, scene)
+    with relay.store.transaction() as c:
+        actual = relay.app.session.dossiers._actor(c, scene, pilot)
+        record = opening(c, relay.store.campaign_id)
+        assert record is not None
+        seed = PILOT_PORTRAYALS[0].model_copy(
+            update={"girl_playbook": actual.girl, "frame_playbook": actual.frame}
+        )
+        planned = PlannedAIPilot(
+            callsign="LANTERN", concept="Checks the winter relay.", portrayal=seed
+        )
+        record = record.model_copy(
+            update={"seats": CampaignSeats(player_count=2, ai_pilots=(planned,))}
+        )
+        relay.store._audit(
+            c, ADMIN.user_id, "approved-ai-seat", EVENT, record.model_dump(mode="json")
+        )
+    body = {
+        "actor": pilot.model_dump(mode="json"),
+        "origin": {"plan": record.plan, "callsign": planned.callsign},
+        "version": 0,
+    }
+    route = "pilot-dossier-propose"
+    retries = []
+    portrayal = {
+        "voice": "Name a check before asking a question.",
+        "approach": "Look for an isolated pilot before requesting a roll call.",
+        "pressure": "Keep counting people while others count equipment.",
+        "repair": "Ask the person she overlooked to run the next roll call.",
+        "value": "A watch is only as good as its handover.",
+        "fear": "Answering for someone who never made it back.",
+        "contradiction": "She wants a partner and always claims the night watch alone.",
+        "goal": "Let a peer run one check without supervising it.",
+        "initiative": "Speak up when a report skips over the quietest pilot.",
+    }
+
+    def post(request, _timeout):
+        outgoing = json.loads(request.data)
+        assert outgoing["model"] == "offline-handler" and outgoing["store"] is False
+        data = json.loads(outgoing["input"][1]["content"])
+        assert data["contract"]["title"] == "AIPilotPortrayalDraft"
+        assert data["packet"]["pilot"] == planned.model_dump(mode="json")
+        assert set(data["packet"]) == {"pilot", "playbook_guidance"}
+        assert all(data["packet"]["playbook_guidance"][field] for field in ("girl", "frame"))
+        for key in ("file-ai-dossier", "parallel-click"):
+            receipt = app.write(PLAYER, key, scene, route, body)
+            assert receipt["portrayal_status"] == "preparing"
+            retries.append(receipt["id"])
+        with pytest.raises(WorkflowError, match="DOSSIER_PROPOSAL_UNAVAILABLE"):
+            app.read(PLAYER, scene, "dossier-review", retries[0])
+        if result == "revoked":
+            consent(app, scene, OTHER, revision=policy + 1, value=False)
+        if result == "interrupted":
+            raise RuntimeError("offline host stopped")
+        # An invalid response tries to change the approved Girl playbook.
+        answer = portrayal | ({"girl_playbook": "PRINCESS"} if result == "invalid" else {})
+        return json.dumps({
+            "status": "completed",
+            "output": [{
+                "type": "message",
+                "role": "assistant",
+                "content": [{"type": "output_text", "text": json.dumps(answer)}],
+            }],
+        }).encode()
+
+    model = OpenAIResponses(
+        model="offline-handler",
+        api_key="offline",
+        limits=ModelLimits(attempts=2, output_tokens=700),
+        post=post,
+    )
+
+    def connect():
+        return P2Scene.reviewed_activity(
+            relay.game,
+            facilitator_id=ADMIN.user_id,
+            opening_channel=relay.scene_channel,
+            handler_batch=ModelActivityBatch(model),
+        )
+
+    app = connect()
+    with pytest.raises(WorkflowError, match="OBSERVATION_DISABLED"):
+        app.write(PLAYER, "disabled", scene, route, body)
+    policy = app.read(ADMIN, scene, "status")["policy_revision"]
+    app.write(
+        ADMIN, "enable-for-draft", scene, "activity-policy-save", {"enabled": True, "revision": 0}
+    )
+    app.write(ADMIN, "notice-for-draft", scene, "configure", {"revision": policy})
+    for viewer in (ADMIN, PLAYER):
+        consent(app, scene, viewer, revision=policy + 1)
+    with pytest.raises(WorkflowError, match="OBSERVATION_DISABLED"):
+        app.write(PLAYER, "no-consent", scene, route, body)
+    consent(app, scene, OTHER, revision=policy + 1)
+    with pytest.raises(WorkflowError, match="PILOT_DOSSIER_OWNER"):
+        app.write(ADMIN, "not-owner", scene, route, body)
+    assert model.status()["attempts"] == 0
+    baseline = state(relay.game)
+    if result == "revoked":
+        with pytest.raises(WorkflowError, match="OBSERVATION_DISABLED"):
+            app.write(PLAYER, "file-ai-dossier", scene, route, body)
+        consent(app, scene, OTHER, revision=policy + 1, key="restore-draft-consent")
+        with pytest.raises(WorkflowError, match="STALE_DOSSIER"):
+            app.write(PLAYER, "file-ai-dossier", scene, route, body)
+        assert not app.read(PLAYER, scene, "work")["dossiers"]
+        assert model.status()["attempts"] == 1
+        assert state(relay.game) == baseline
+        return
+    if result == "interrupted":
+        with pytest.raises(RuntimeError, match="offline host stopped"):
+            app.write(PLAYER, "file-ai-dossier", scene, route, body)
+        relay.clock.now += 121
+    else:
+        initial = app.write(PLAYER, "file-ai-dossier", scene, route, body)
+        assert initial["id"] == retries[0]
+    relay.store.engine.dispose()
+    app = connect()
+    receipt = app.write(PLAYER, "file-ai-dossier", scene, route, body)
+    assert receipt["id"] == retries[0] == retries[1]
+    assert app.write(PLAYER, "new-click-after-reopen", scene, route, body) == receipt
+    assert model.status()["attempts"] == 1
+    source = "handler" if result == "generated" else "approved_plan"
+    assert receipt["portrayal_status"] == source
+    with pytest.raises(WorkflowError, match="DOSSIER_NOT_OWNED"):
+        app.read(ADMIN, scene, "dossier-review", receipt["id"])
+    dossier = app.read(PLAYER, scene, "dossier-review", receipt["id"])
+    assert dossier["portrayal_source"] == source
+    expected = seed.model_copy(update=portrayal) if result == "generated" else seed
+    assert dossier["profile"]["pilot_portrayal"] == expected.model_dump(mode="json")
+    assert state(relay.game) == baseline
+    decision = {"id": receipt["id"]}
+    with pytest.raises(WorkflowError, match="DOSSIER_NOT_OWNED"):
+        app.write(ADMIN, "cannot-confirm", scene, "dossier-confirm", decision)
+    approved = app.write(PLAYER, "confirm-ai-dossier", scene, "dossier-confirm", decision)
+    assert approved["effects_applied"] is False
+    with relay.store.engine.connect() as c:
+        assert app.session.dossiers.activity_pilots(c, scene)[pilot] == (actual.label, expected)
 
 
 @pytest.mark.parametrize("relay", ["reviewed"], indirect=True)

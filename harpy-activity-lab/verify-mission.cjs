@@ -1109,7 +1109,7 @@ async function verifyResponsiveHud(browser, server) {
           if (id === "profile") {
             const actions = current.getByRole("group", {name:"Pilot file actions"});
             const buttons = actions.getByRole("button");
-            assert.deepEqual(await buttons.allTextContents(), ["Open portrayal", "Starting Bonds", "Restart character"]);
+            assert.deepEqual(await buttons.allTextContents(), ["Starting Bonds", "Restart character"]);
             const row = await actions.evaluate(group => {
               const outer = group.getBoundingClientRect();
               return [...group.children].map(button => {
@@ -2618,7 +2618,10 @@ async function mainTest() {
         campaign_id:"00000000-0000-4000-8000-000000000123", setup_preview:true,
         configured:true, handler_model:"gpt-6.1-sol", ai_on:false,
       }}));
-      await page.route(/\/api\/activity\/review-scenes(?:\?.*)?$/, route => route.fulfill({json:{scenes:[]}}));
+      const reviewedScene = randomUUID();
+      await page.route(/\/api\/activity\/review-scenes(?:\?.*)?$/, route => route.fulfill({json:{
+        scenes:state.opening ? [{id:reviewedScene, label:"Relay handover", speaker:"pilot"}] : [],
+      }}));
       await view.getByRole("button", {name:"Campaign Setup", exact:true}).click();
       const pane = view.locator('[data-pane="campaign-setup"]');
       await pane.getByRole("heading", {name:"Session Zero", exact:true}).waitFor();
@@ -2667,6 +2670,55 @@ async function mainTest() {
         assert(layout.documentWidth <= layout.width && !layout.overflowing.length && layout.header === (width <= 550 ? "relative" : "sticky"),
           "Unexpected Campaign Setup layout at " + width + " " + JSON.stringify(layout));
       }
+      const dossier = {id:"dossier-proposal:fixture", generated_pilot:true, status:"awaiting_controller_confirmation"};
+      const pilot = {kind:"pilot", entity:"offline-actor"};
+      const dossierPosts = [];
+      await page.route(new RegExp("/api/director/" + reviewedScene + "/"), route => {
+        const path = new URL(route.request().url()).pathname.split("/").slice(4).join("/");
+        if (route.request().method() === "POST" && ["pilot-dossier-propose", "dossier-confirm"].includes(path)) {
+          dossierPosts.push(route.request().postDataJSON());
+          return route.fulfill({json:{id:dossier.id, portrayal_status:"handler"}});
+        }
+        const records = {
+          work:{dossiers:dossierPosts.length === 1 ? [dossier] : [], declarations:[],
+            handler_deliveries:[], native:{choices:[]}, proposals:[]},
+          status:{phase:"quiet", consented:true, mode:"shadow", policy_revision:1},
+          timeline:{entries:[]},
+          "pilot-dossiers":{plan:"approved-plan", pilots:["LANTERN"],
+            actors:[{actor:pilot, label:"Relay pilot", version:0, eligible_pilots:["LANTERN"]}]},
+          ["dossier-review/" + dossier.id]:{pilot_origin:{callsign:"LANTERN"}, portrayal_source:"handler",
+            profile:{voice:"Name a check first.", reaction_tendencies:[], values:[], fears:[], contradictions:[],
+              pilot_portrayal:{girl_playbook:"MOCKINGBIRD", frame_playbook:"JANUS", initiative:"Speak when a pilot is overlooked."}}},
+        };
+        return path in records ? route.fulfill({json:records[path]}) : route.fulfill({status:404, json:{}});
+      });
+      Object.assign(state, {
+        can_set_group:false, can_edit_plan:false, facilitator_only:true, is_pilot:false,
+        opening:{introduction:"Cadre, check in.", first_mission_day:4}, opening_day:4, opening_posts:[],
+        first_briefing:{ready:true, pilots:[{id:discordUsers.other, name:"RELAY TWO"}]},
+      });
+      const folders = view.getByRole("navigation", {name:"Campaign folders"});
+      await folders.getByRole("button", {name:"Pilot Profile", exact:true}).click();
+      await folders.getByRole("button", {name:"Campaign Setup", exact:true}).click();
+      await pane.getByRole("button", {name:"Review first mission briefing", exact:true}).click();
+      const briefing = view.getByRole("dialog", {name:"Review first mission briefing", exact:true});
+      await briefing.getByLabel("First mission objective").waitFor();
+      await briefing.getByRole("button", {name:"Close", exact:true}).click();
+      await pane.getByText("Director work", {exact:true}).click();
+      await pane.getByLabel("Your character in this scene").selectOption(pilot.entity);
+      await pane.getByLabel("Approved AI Pilot").selectOption("LANTERN");
+      await pane.getByRole("button", {name:"Prepare dossier for review", exact:true}).click();
+      await pane.getByRole("button", {name:"Review Pilot dossier", exact:true}).click();
+      const file = view.getByRole("dialog", {name:"Review Pilot dossier", exact:true});
+      await file.getByText("Handler draft", {exact:true}).waitFor();
+      await file.getByText("Girl / Frame · MOCKINGBIRD / JANUS", {exact:true}).waitFor();
+      await file.getByText("Voice · Name a check first.", {exact:true}).waitFor();
+      await file.getByRole("button", {name:"Confirm Pilot dossier", exact:true}).click();
+      await file.waitFor({state:"hidden"});
+      assert.deepEqual(dossierPosts, [
+        {actor:pilot, version:0, origin:{plan:"approved-plan", callsign:"LANTERN"}},
+        {id:dossier.id},
+      ]);
       await page.context().close();
       const handler = await openPilot(browser, server, "handler", false, undefined, undefined, {mobile:true});
       const closeHandlerInbox = handler.view.getByRole("button", {name:"Close inbox", exact:true});

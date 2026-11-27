@@ -226,7 +226,6 @@ const folderNotices = {
 };
 
 export function foundationUI(send, readTranscript, showBattlefield, battlefield, renderRoomPlays, refreshPlayer, artwork, renderPilotBonds, resumeEnrollment, openSheetReset, requestCancellation) {
-  let openPortrayal;
   let openCampaignSetup;
   let setDossierVisible;
   let dossierVisible = false;
@@ -1574,11 +1573,6 @@ export function foundationUI(send, readTranscript, showBattlefield, battlefield,
         const actions = element("div", undefined, "profile-actions");
         actions.setAttribute("role", "group");
         actions.setAttribute("aria-label", "Pilot file actions");
-        if (openPortrayal) {
-          const portrayal = button("Open portrayal", openPortrayal);
-          portrayal.setAttribute("aria-haspopup", "dialog");
-          actions.append(portrayal);
-        }
         renderPilotBonds(actions, player);
         if (player.sheet_reset) {
           const restart = button("Restart character", () => openSheetReset(player.sheet_reset), "warning-outline");
@@ -1946,7 +1940,6 @@ export function foundationUI(send, readTranscript, showBattlefield, battlefield,
 
   return {
     updateHandoverAssignments:handover.updateAssignments,
-    setPortrayal(open) { openPortrayal = open; if (player) render(); },
     setCampaignSetup(open) { openCampaignSetup = open; if (player) render(); },
     setDossierReview(setVisible) { setDossierVisible = setVisible; if (player) render(); },
     playSelection() { return playSelection; },

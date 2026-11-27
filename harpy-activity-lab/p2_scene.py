@@ -48,8 +48,7 @@ from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_advocate_alone import Order as AdvocateOrder
 from girlframe.engine.m3_handler_character import PROFILES
 from girlframe.engine.m3_handler_state import GEAR, HISTORY_LABELS, PLAYBOOKS, Draft, HandlerNotes
-from girlframe.engine.pilot_portrayal import PILOT_CALLSIGNS, PILOT_PORTRAYALS, PilotPortrayal
-from girlframe.engine.playbooks import FRAME_TYPES, GIRL_TYPES
+from girlframe.engine.pilot_portrayal import PilotPortrayal
 from girlframe.scenes.opening import OpeningDraft as SceneOpeningDraft
 from girlframe.services.activity_canon import ActivityCanon
 from girlframe.services.activity_handler_followups import ActivityHandlerFollowups
@@ -583,19 +582,7 @@ class P2Scene:
             with self.session.store.engine.connect() as c:
                 viewer = self._review_viewer(c, viewer)
         if route in SESSION_ZERO_READS and identity is None:
-            state = self.session_zero.read(viewer, route)
-            if (
-                route == "session-zero"
-                and state.get("can_edit_plan")
-                and "pilot_generator" not in state
-            ):
-                state["pilot_generator"] = {
-                    "callsigns": PILOT_CALLSIGNS,
-                    "portrayals": tuple(item.model_dump(mode="json") for item in PILOT_PORTRAYALS),
-                    "girl_types": GIRL_TYPES,
-                    "frame_types": FRAME_TYPES,
-                }
-            return state
+            return self.session_zero.read(viewer, route)
         if route == "portrayal-sheets" and identity is None:
             return self.portrayal.view(viewer)
         if route == "portrayal-preview" and identity is not None and scene:
@@ -1082,6 +1069,7 @@ class P2Scene:
             version = data.get("version", 0)
             if type(version) is not int:
                 raise ValueError("Use the current approved dossier revision.")
+            handler = self.session.conversation.activity_batch
             return self.session.dossiers.propose_pilot(
                 viewer,
                 key,
@@ -1089,6 +1077,12 @@ class P2Scene:
                 ActorRef.model_validate(data["actor"]),
                 PilotDossierOrigin.model_validate(data["origin"]),
                 version,
+                generate=(
+                    handler.draft_pilot_portrayal
+                    if self.session.observer.reviewed_activity_trial
+                    and isinstance(handler, ModelActivityBatch)
+                    else None
+                ),
             )
         if route == "dossier-confirm" and data.keys() == {"id"} and isinstance(data["id"], str):
             return self.session.dossiers.confirm(viewer, key, scene, data["id"])
